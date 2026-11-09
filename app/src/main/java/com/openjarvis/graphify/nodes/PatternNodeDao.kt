@@ -21,6 +21,9 @@ interface PatternNodeDao {
     
     @Query("UPDATE pattern_nodes SET confidence = :confidence, lastSeen = :timestamp WHERE id = :id")
     suspend fun updateConfidence(id: Long, confidence: Float, timestamp: Long = System.currentTimeMillis())
+
+    @Query("UPDATE pattern_nodes SET timeOfDayMask = :timeMask WHERE id = :id")
+    suspend fun updateTimeMask(id: Long, timeMask: Int)
     
     @Query("UPDATE pattern_nodes SET occurrenceCount = occurrenceCount + 1, lastSeen = :timestamp WHERE id = :id")
     suspend fun incrementOccurrence(id: Long, timestamp: Long = System.currentTimeMillis())
