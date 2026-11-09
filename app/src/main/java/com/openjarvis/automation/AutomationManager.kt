@@ -174,7 +174,7 @@ class AutomationManager(private val context: Context) {
         val lower = input.lowercase()
 
         val dailyMatch = Regex(
-            """every day at (\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)?""",
+            """every day at (\d{1,2})(?::(\d{2}))?\s*(am|pm)?""",
             RegexOption.IGNORE_CASE
         ).find(lower)
         if (dailyMatch != null) {
@@ -188,7 +188,7 @@ class AutomationManager(private val context: Context) {
         }
 
         val intervalMatch = Regex(
-            """every (\\d+)\\s*(minute|hour|day)s?""",
+            """every (\d+)\s*(minute|hour|day)s?""",
             RegexOption.IGNORE_CASE
         ).find(lower)
         if (intervalMatch != null) {
