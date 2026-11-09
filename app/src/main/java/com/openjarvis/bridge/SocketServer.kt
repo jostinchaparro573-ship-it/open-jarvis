@@ -46,7 +46,7 @@ class SocketServer(
     }
     
     companion object {
-        private const val SOCKET_NAME = "jarvis.port"
+        const val SOCKET_NAME = "jarvis.port"
         private const val MAX_COMMAND_LENGTH = 2000
         private const val MAX_REQUESTS_PER_SECOND = 10
     }
