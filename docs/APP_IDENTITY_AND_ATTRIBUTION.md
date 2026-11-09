@@ -1,21 +1,21 @@
-# Jarvis — App identity, creator credits and third-party notices
+# OpenJarvis — App identity, creator credits and third-party notices
 
-Status: product requirement; final names and providers must be confirmed before release.
+Status: product name confirmed by the user as OpenJarvis; creator display name and providers must be confirmed before release.
 
 ## In-app location
 
-Add an **About Jarvis / Acerca de Jarvis** entry inside Settings. It should open a readable page with these sections:
+Add an **About OpenJarvis / Acerca de OpenJarvis** entry inside Settings. It should open a readable page with these sections:
 
 1. **Product identity**
-   - Product name: Jarvis (final branding subject to name/trademark review).
-   - Edition: personal Android and Windows edition.
+   - Product name: OpenJarvis (final branding subject to name/trademark review).
+   - Edition: personal Android and Windows edition of OpenJarvis.
    - Version and build number.
    - Supported platforms: Android 12+ and Windows 11+ once verified.
 
 2. **Creator and project ownership**
    - Creator / project lead: [creator display name — confirm with the user].
    - Project owner/contact: [to be confirmed].
-   - Copyright notice for original code, UI, documentation, and other original contributions created for this Jarvis derivative: [year and rights holder — confirm before release].
+   - Copyright notice for original code, UI, documentation, and other original contributions created for this OpenJarvis derivative: [year and rights holder — confirm before release].
    - Clearly distinguish original contributions in this derivative from inherited Open Jarvis source code and third-party components.
 
 3. **Original project and open-source notices**
@@ -41,7 +41,7 @@ Add an **About Jarvis / Acerca de Jarvis** entry inside Settings. It should open
 
 ## Attribution and rights rules
 
-- The app may credit the user as the creator and project lead of this customized Jarvis edition and of their own original contributions.
+- The app may credit the user as the creator and project lead of this customized OpenJarvis edition and of their own original contributions.
 - Do not claim that the user solely authored the original upstream Open Jarvis code.
 - Preserve all inherited copyright and license notices. The upstream repository currently contains an MIT license naming TokenArc; verify the exact upstream license again before distributing any release.
 - Maintain a software bill of materials / dependency-license inventory before distribution.
@@ -55,4 +55,4 @@ Add an **About Jarvis / Acerca de Jarvis** entry inside Settings. It should open
 - [ ] Confirm hosting, AI, auth, storage, speech, analytics and support providers.
 - [ ] Review data flows and privacy policy against actual implementation.
 - [ ] Generate third-party license notices and software bill of materials.
-- [ ] Add and test the About screen on Android and Windows.
+- [ ] Add and test the About OpenJarvis screen on Android and Windows.
