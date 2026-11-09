@@ -6,12 +6,11 @@ import org.json.JSONObject
 
 object LLMResponseValidator {
     
+    // Only actions currently implemented by AgentCore are accepted.
+    // Unsupported actions fail validation instead of being silently ignored.
     private val knownActions = setOf(
-        "open_app", "tap", "tap_coords", "long_press", "type",
-        "clear_type", "swipe", "scroll", "press_back", "press_home",
-        "press_recents", "wait_for", "screenshot", "read_screen",
-        "ai_prompt", "mcp_call", "reply_notification",
-        "read_clipboard", "write_clipboard", "highlight_element", "error"
+        "open_app", "tap", "type", "press_back", "press_home",
+        "press_recents", "extract_text", "error"
     )
     
     fun validate(rawResponse: String): ValidationResult {
