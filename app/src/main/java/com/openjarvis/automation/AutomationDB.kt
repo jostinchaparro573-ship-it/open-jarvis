@@ -2,6 +2,7 @@ package com.openjarvis.automation
 
 import android.content.Context
 import androidx.room.*
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Entity(tableName = "automations")
 data class AutomationEntity(
@@ -43,6 +44,14 @@ abstract class AutomationDB : RoomDatabase() {
     abstract fun automationDao(): AutomationDao
 
     companion object {
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE automations ADD COLUMN scheduleAtMs INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
         @Volatile private var INSTANCE: AutomationDB? = null
 
         fun getInstance(context: Context): AutomationDB {
@@ -52,7 +61,7 @@ abstract class AutomationDB : RoomDatabase() {
                     AutomationDB::class.java,
                     "automations.db"
                 )
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(MIGRATION_1_2)
                     .build()
                     .also { INSTANCE = it }
             }
@@ -61,27 +70,45 @@ abstract class AutomationDB : RoomDatabase() {
 }
 
 internal fun AutomationManager.Automation.toEntity(): AutomationEntity {
-    val scheduleFields = when (val value = schedule) {
-        is AutomationManager.AutomationSchedule.Daily ->
-            listOf("daily", value.hour, value.minute, 0, 0L, 0L)
-        is AutomationManager.AutomationSchedule.Weekly ->
-            listOf("weekly", value.hour, value.minute, value.dayOfWeek, 0L, 0L)
-        is AutomationManager.AutomationSchedule.Interval ->
-            listOf("interval", 0, 0, 0, value.intervalMs, 0L)
-        is AutomationManager.AutomationSchedule.Once ->
-            listOf("once", 0, 0, 0, 0L, value.atMs)
+    val type: String
+    var hour = 0
+    var minute = 0
+    var dayOfWeek = 0
+    var intervalMs = 0L
+    var atMs = 0L
+
+    when (val value = schedule) {
+        is AutomationManager.AutomationSchedule.Daily -> {
+            type = "daily"
+            hour = value.hour
+            minute = value.minute
+        }
+        is AutomationManager.AutomationSchedule.Weekly -> {
+            type = "weekly"
+            hour = value.hour
+            minute = value.minute
+            dayOfWeek = value.dayOfWeek
+        }
+        is AutomationManager.AutomationSchedule.Interval -> {
+            type = "interval"
+            intervalMs = value.intervalMs
+        }
+        is AutomationManager.AutomationSchedule.Once -> {
+            type = "once"
+            atMs = value.atMs
+        }
     }
 
     return AutomationEntity(
         id = id,
         name = name,
         command = command,
-        scheduleType = scheduleFields[0] as String,
-        scheduleHour = scheduleFields[1] as Int,
-        scheduleMinute = scheduleFields[2] as Int,
-        scheduleDayOfWeek = scheduleFields[3] as Int,
-        scheduleIntervalMs = scheduleFields[4] as Long,
-        scheduleAtMs = scheduleFields[5] as Long,
+        scheduleType = type,
+        scheduleHour = hour,
+        scheduleMinute = minute,
+        scheduleDayOfWeek = dayOfWeek,
+        scheduleIntervalMs = intervalMs,
+        scheduleAtMs = atMs,
         enabled = enabled,
         lastRun = lastRun,
         lastResult = lastResult,
