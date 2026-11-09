@@ -76,15 +76,16 @@ object LLMResponseValidator {
         }
         
         if (actions.size > 50) {
-            errors.add("Suspiciously long action plan (${actions.size} steps) — capped at 50")
-            return ValidationResult(true, actions.take(50), errors, true)
+            errors.add("Suspiciously long action plan (${actions.size} steps)")
+            return ValidationResult(false, emptyList(), errors, false)
         }
-        
+
+        // Fail closed: never execute a partial plan after skipping unsupported or malformed actions.
         return ValidationResult(
-            isValid = actions.isNotEmpty(),
-            actions = actions,
+            isValid = actions.isNotEmpty() && errors.isEmpty(),
+            actions = if (errors.isEmpty()) actions else emptyList(),
             errors = errors,
-            wasRepaired = errors.isNotEmpty() && actions.isNotEmpty()
+            wasRepaired = false
         )
     }
     
