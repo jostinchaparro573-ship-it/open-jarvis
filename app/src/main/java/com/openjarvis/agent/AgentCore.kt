@@ -29,11 +29,8 @@ class AgentCore(private val context: Context) {
     private val graphifyRepo = GraphifyRepository(context)
     private val analysisEngine = AnalysisEngine(context)
     private val universalAdapter = UniversalAdapter(context)
-    private val screenReader: ScreenReader
-        get() = ScreenReader(
-            JarvisAccessibilityService.instance
-                ?: throw IllegalStateException("Accessibility service is not enabled")
-        )
+    private val screenReader: ScreenReader?
+        get() = JarvisAccessibilityService.instance?.let { ScreenReader(it) }
     private val visionModule = VisionModule.getInstance(context)
     private val taskRouter = TaskRouter(context)
     private val appAnalyzer = AppAnalyzer(context)
@@ -128,7 +125,7 @@ fun executeTask(cleanCommand: String) {
                 _state.value = AgentState.Running("reading screen...")
                 
                 val screenText = withContext(Dispatchers.IO) {
-                    screenReader.extractAllText()
+                    screenReader?.extractAllText().orEmpty()
                 }
                 
                 _state.value = AgentState.Running("getting context...")
@@ -151,28 +148,15 @@ fun executeTask(cleanCommand: String) {
                         val latency = System.currentTimeMillis() - startTime
                         
                         val validation = LLMResponseValidator.validate(rawJson)
-                        val rawForParsing = if (!validation.isValid && validation.errors.isNotEmpty()) {
-                            _state.value = AgentState.Error("Invalid response: ${validation.errors.first()}")
+                        if (!validation.isValid) {
+                            val reason = validation.errors.firstOrNull() ?: "No supported actions returned"
+                            _state.value = AgentState.Error("Invalid response: $reason")
                             graphifyRepo.logTask(cleanCommand, "failed: validation error", "", 0)
                             return@fold
-                        } else {
-                            rawJson
                         }
-                        
-                        val actions = ActionJsonParser.parse(rawForParsing)
-                            ?: run {
-                                val retry = universalAdapter.complete(
-                                    fullSystem,
-                                    "$cleanCommand\n\nRespond with JSON array ONLY. No other text."
-                                )
-                                retry.getOrNull()?.let { ActionJsonParser.parse(it) }
-                            }
-                        
-                        if (actions == null) {
-                            _state.value = AgentState.Error("Could not parse AI response")
-                            graphifyRepo.logTask(cleanCommand, "failed: parse error", "", 0)
-                            return@fold
-                        }
+
+                        // Execute only the exact action objects that passed validation.
+                        val actions = validation.actions
                         
                         _state.value = AgentState.Running("executing ${actions.size} actions...")
                         
