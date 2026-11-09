@@ -160,8 +160,13 @@ fun executeTask(cleanCommand: String) {
                         
                         _state.value = AgentState.Running("executing ${actions.size} actions...")
                         
-                        executeActions(actions)
-                        
+                        val executionSucceeded = executeActions(actions)
+                        if (!executionSucceeded) {
+                            val reason = (state.value as? AgentState.Error)?.message ?: "Action failed"
+                            graphifyRepo.logTask(cleanCommand, "failed: $reason", "", latency)
+                            return@fold
+                        }
+
                         graphifyRepo.logTask(
                             cleanCommand = cleanCommand,
                             result = "success",
@@ -210,7 +215,7 @@ fun executeTask(cleanCommand: String) {
     
     suspend fun getAIAppCount(): Int = appAnalyzer.getAICount()
 
-    private suspend fun executeActions(actions: List<Action>) {
+    private suspend fun executeActions(actions: List<Action>): Boolean {
         for ((index, action) in actions.withIndex()) {
             _state.value = AgentState.Running("action ${index + 1}/${actions.size}")
             
@@ -220,32 +225,53 @@ fun executeTask(cleanCommand: String) {
                     if (label != null) {
                         val packageName = findPackageByLabel(label)
                         if (packageName != null) {
-                            JarvisAccessibilityService.instance?.openAppByPackage(packageName)
+                            val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
+                            if (launchIntent == null) {
+                                _state.value = AgentState.Error("App cannot be opened: $label")
+                                return false
+                            }
+                            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(launchIntent)
                             graphifyRepo.logAppOpened(packageName, label)
                         } else {
                             _state.value = AgentState.Error("App not found: $label")
-                            return
+                            return false
                         }
                     }
                 }
                 Action.TAP -> {
-                    action.text?.let { text ->
-                        JarvisAccessibilityService.instance?.tapByText(text)
+                    val service = JarvisAccessibilityService.instance
+                    val text = action.text
+                    if (service == null || text.isNullOrBlank() || !service.tapByText(text)) {
+                        _state.value = AgentState.Error("Could not tap the requested screen element")
+                        return false
                     }
                 }
                 Action.TYPE -> {
-                    action.value?.let { value ->
-                        JarvisAccessibilityService.instance?.typeText(value)
+                    val service = JarvisAccessibilityService.instance
+                    val value = action.value
+                    if (service == null || value == null || !service.typeText(value)) {
+                        _state.value = AgentState.Error("Could not enter text; accessibility may be unavailable")
+                        return false
                     }
                 }
                 Action.PRESS_BACK -> {
-                    JarvisAccessibilityService.instance?.pressBack()
+                    if (JarvisAccessibilityService.instance?.pressBack() != true) {
+                        _state.value = AgentState.Error("Could not perform Back action")
+                        return false
+                    }
                 }
                 Action.PRESS_HOME -> {
-                    JarvisAccessibilityService.instance?.pressHome()
+                    if (JarvisAccessibilityService.instance?.pressHome() != true) {
+                        _state.value = AgentState.Error("Could not perform Home action")
+                        return false
+                    }
                 }
                 Action.PRESS_RECENTS -> {
-                    JarvisAccessibilityService.instance?.pressRecents()
+                    if (JarvisAccessibilityService.instance?.pressRecents() != true) {
+                        _state.value = AgentState.Error("Could not open recent apps")
+                        return false
+                    }
                 }
                 Action.AI_PROMPT -> {
                     val packageName = action.packageName
@@ -268,17 +294,22 @@ fun executeTask(cleanCommand: String) {
                 }
                 Action.EXTRACT_TEXT -> {
                     val outputKey = action.outputKey ?: "page_text"
-                    val text = screenReader.extractAllText()
+                    val text = screenReader?.extractAllText()
+                    if (text == null) {
+                        _state.value = AgentState.Error("Screen reading requires accessibility permission")
+                        return false
+                    }
                     workingMemory.set(outputKey, text)
                 }
                 Action.ERROR -> {
                     _state.value = AgentState.Error(action.message ?: "Task failed")
-                    return
+                    return false
                 }
             }
-            
+
             kotlinx.coroutines.delay(500)
         }
+        return true
     }
 
     private fun findPackageByLabel(label: String): String? {
