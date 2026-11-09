@@ -1,8 +1,6 @@
 package com.openjarvis.bridge
 
 import android.content.Context
-import android.os.Build
-import android.os.Process
 import com.openjarvis.agent.AgentCore
 import com.openjarvis.agent.AgentState
 import com.openjarvis.graphify.GraphifyRepository
@@ -12,6 +10,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.ServerSocket
+import java.net.InetAddress
 import java.net.Socket
 
 class SocketServer(
@@ -30,20 +29,10 @@ class SocketServer(
     private val socketFile: java.io.File
         get() = java.io.File(context.filesDir, SOCKET_NAME)
     
-    private val allowedUids = setOf(
-        context.applicationInfo.uid,
-        2000,
-        "com.termux".hashCode()
-    )
-
-    private fun isAuthorized(): Boolean {
-        return try {
-            val callingUid = Process.myUid()
-            callingUid in allowedUids
-        } catch (e: Exception) {
-            false
-        }
-    }
+    // TCP sockets do not expose the remote Android app UID. Process.myUid()
+    // identifies this server process, not the connecting client. Keep the bridge
+    // closed until it is replaced with authenticated local IPC.
+    private fun isAuthorized(): Boolean = false
     
     companion object {
         const val SOCKET_NAME = "jarvis.port"
@@ -77,7 +66,7 @@ class SocketServer(
 
     private suspend fun acceptConnections() = withContext(Dispatchers.IO) {
         try {
-            serverSocket = ServerSocket(0)
+            serverSocket = ServerSocket(0, 16, InetAddress.getLoopbackAddress())
             runningPort = serverSocket?.localPort ?: 0
             
             val sockFile = socketFile
@@ -100,11 +89,17 @@ class SocketServer(
 
     private suspend fun handleClient(clientSocket: Socket) = withContext(Dispatchers.IO) {
         try {
+            clientSocket.soTimeout = 3000
             val reader = BufferedReader(InputStreamReader(clientSocket.getInputStream()))
             val writer = PrintWriter(clientSocket.getOutputStream(), true)
-            
+
             val line = reader.readLine() ?: run {
                 writer.println("""{"error":"empty request"}""")
+                return@withContext
+            }
+
+            if (line.length > MAX_COMMAND_LENGTH) {
+                writer.println(createErrorResponse("", "request too large"))
                 return@withContext
             }
 
