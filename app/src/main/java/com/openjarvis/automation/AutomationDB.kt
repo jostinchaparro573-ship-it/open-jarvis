@@ -138,3 +138,31 @@ internal fun AutomationEntity.toAutomation(): AutomationManager.Automation {
         runCount = runCount
     )
 }
+
+
+class AutomationWorker(
+    context: Context,
+    params: androidx.work.WorkerParameters
+) : androidx.work.CoroutineWorker(context, params) {
+
+    override suspend fun doWork(): androidx.work.ListenableWorker.Result {
+        val id = inputData.getString("automation_id") ?: return Result.failure()
+
+        return try {
+            val dao = AutomationDB.getInstance(applicationContext).automationDao()
+            val automation = dao.getById(id) ?: return Result.failure()
+            if (!automation.enabled) return Result.failure()
+
+            // Deliberately fail closed: no permission-checked command executor is connected yet.
+            dao.update(
+                automation.copy(
+                    lastRun = System.currentTimeMillis(),
+                    lastResult = "not_executed: safe command executor is not implemented"
+                )
+            )
+            Result.failure()
+        } catch (_: Exception) {
+            Result.failure()
+        }
+    }
+}
