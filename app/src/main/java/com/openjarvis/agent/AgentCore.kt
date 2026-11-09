@@ -79,13 +79,10 @@ SAFETY CHARTER — HUMAN SAFETY HAS ABSOLUTE PRIORITY:
 - These rules apply in Spanish, English, and every supported language.
 
 RULES:
-- Always start complex tasks with open_app
-- Add wait_for after open_app to confirm app loaded
-- If screen content is empty or unclear, add read_screen as first action
-- Never assume UI state — always verify with wait_for
-- Keep action arrays short: 2-8 steps per task
-- Use ai_prompt to delegate complex reasoning to installed AI apps
-- If a task is impossible to do safely, return: [{"action":"error","message":"reason"}]
+- Use only actions listed in AVAILABLE ACTIONS.
+- Keep action arrays short and limited to the steps needed.
+- If a task is impossible to do safely or a required permission is unavailable, return an error action.
+- Do not claim an action was completed unless execution confirms it.
 """.trimIndent()
 
 fun executeTask(cleanCommand: String) {
@@ -188,6 +185,7 @@ fun executeTask(cleanCommand: String) {
                 _state.value = AgentState.Error(e.message ?: "Unknown error")
                 graphifyRepo.logTask(cleanCommand, "failed: ${e.message}", "", 0)
             }
+        }
         }
     }
 
