@@ -29,7 +29,11 @@ class AgentCore(private val context: Context) {
     private val graphifyRepo = GraphifyRepository(context)
     private val analysisEngine = AnalysisEngine(context)
     private val universalAdapter = UniversalAdapter(context)
-    private val screenReader = ScreenReader(context)
+    private val screenReader: ScreenReader
+        get() = ScreenReader(
+            JarvisAccessibilityService.instance
+                ?: throw IllegalStateException("Accessibility service is not enabled")
+        )
     private val visionModule = VisionModule.getInstance(context)
     private val taskRouter = TaskRouter(context)
     private val appAnalyzer = AppAnalyzer(context)
