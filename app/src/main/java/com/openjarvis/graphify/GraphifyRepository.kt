@@ -197,7 +197,7 @@ class GraphifyRepository(context: Context) {
         }
 
     suspend fun updatePatternTimeMask(id: Long, timeMask: Int) = withContext(Dispatchers.IO) {
-        patternNodeDao.getByHash("").let { }
+        patternNodeDao.updateTimeMask(id, timeMask)
     }
 
     suspend fun insertProvider(provider: ProviderNode): Long = withContext(Dispatchers.IO) {
