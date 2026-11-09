@@ -22,13 +22,15 @@ This file separates changes visible in source from features that are still only 
 - Restricted generated agent plans to actions currently implemented, validate required arguments, and reject partial plans containing unsupported or malformed actions.
 - Agent execution now reports failure when supported accessibility actions do not actually execute, rather than always recording success.
 - Corrected the automation Room DAO/entity mismatch, added a schema migration, and separated periodic work from one-time work scheduling.
+- Fixed a no-op Graphify pattern update so time-of-day masks are actually persisted through a Room update query.
+- Confirmed the app display name as **OpenJarvis** and updated the launcher/app-name resource.
 - Automation commands are deliberately **not executed** yet. The worker records that execution is unavailable and fails closed; it must not report false success.
 - Disabled the unauthenticated TCP bridge until a secure local IPC/authentication design is implemented. The socket is loopback-only and rejects requests.
 - Added an Android CI workflow for Kotlin compilation, unit tests, and lint. It does not build or publish an APK.
 
 ## Important incomplete areas
 
-- No successful build, unit-test, lint, or device-test result has been confirmed yet.
+- No successful build, unit-test, lint, or device-test result has been confirmed yet. The latest recorded CI run (run `42719362949`) failed during Kotlin/KSP compilation. Its logs identified a missing closing brace in `AgentCore.kt`, outdated OkHttp request-body syntax in `MCPClient.kt`, and an unused DAO query parameter in `TaskNodeDao.kt`. Source fixes for those findings have been pushed to the working branch; a subsequent green CI run has not yet been verified.
 - The Android notification listener is not registered in the manifest. Its existing broad notification handling must be replaced with explicit opt-in and a strict WhatsApp group allowlist for the requested `11-2` group before enabling it.
 - Voice recognition is not yet connected end-to-end to AgentCore; there is no verified always-on “Jarvis” wake phrase.
 - Spanish-first speech output and bilingual voice selection remain incomplete.
