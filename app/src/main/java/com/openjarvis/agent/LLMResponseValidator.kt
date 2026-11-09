@@ -56,10 +56,22 @@ object LLMResponseValidator {
             }
             
             if (actionType !in knownActions) {
-                errors.add("Unknown action type: $actionType — skipping")
+                errors.add("Unsupported action type: $actionType — skipping")
                 continue
             }
-            
+
+            val missingRequiredField = when (actionType) {
+                "open_app" -> obj.optString("label").isBlank()
+                "tap" -> obj.optString("text").isBlank()
+                "type" -> !obj.has("value") || obj.isNull("value")
+                "error" -> obj.optString("message").isBlank()
+                else -> false
+            }
+            if (missingRequiredField) {
+                errors.add("Action $actionType is missing a required field")
+                continue
+            }
+
             actions.add(parseAction(obj))
         }
         
