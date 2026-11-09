@@ -36,6 +36,17 @@ class JarvisNotificationListener : NotificationListenerService() {
             "com.razorpay"
         )
         
+        private val messagingApps = listOf(
+            "com.whatsapp",
+            "com.google.android.apps.messaging",
+            "com.samsung.android.messaging",
+            "com.instagram.android",
+            "com.facebook.orca",
+            "org.telegram.messenger",
+            "com.slack",
+            "com.discord"
+        )
+
         fun shouldProcessNotification(packageName: String): Boolean {
             return packageName !in PRIVACY_PROTECTED_APPS
         }
@@ -149,17 +160,4 @@ class JarvisNotificationListener : NotificationListenerService() {
         val isMessaging: Boolean,
         val sender: String?
     )
-    
-    companion object {
-        private val messagingApps = listOf(
-            "com.whatsapp",
-            "com.google.android.apps.messaging",
-            "com.samsung.android.messaging",
-            "com.instagram.android",
-            "com.facebook.orca",
-            "org.telegram.messenger",
-            "com.slack",
-            "com.discord"
-        )
-    }
 }
