@@ -2,6 +2,7 @@ package com.openjarvis.automation
 
 import android.content.Context
 import androidx.room.*
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Entity(tableName = "automations")
