@@ -1,6 +1,8 @@
-# M7 Test Results
+# Historical Upstream Test Results — NOT verified for this fork
 
-## Test Date: 2024-04-25
+## Original upstream test date: 2024-04-25
+
+> Historical upstream report only. These results do not establish that the current OpenJarvis fork builds, passes tests, is secure, or is release-ready. Re-run all tests on the current working branch before relying on any result.
 ## Build: v1.0.0-beta
 
 ---
@@ -151,6 +153,6 @@ Status: ✅ PROTECTED
 
 ## Test Conclusion
 
-**Status**: ✅ RELEASE READY
+**Current fork status**: NOT VERIFIED.
 
-All CRITICAL and HIGH issues from audit have been fixed and verified. The app is ready for v1.0.0-beta release.
+The historical upstream conclusion above must not be used as a release approval for this fork. Current release readiness remains blocked until CI, device tests, security review, and privacy review pass.
