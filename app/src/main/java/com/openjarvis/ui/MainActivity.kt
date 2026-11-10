@@ -53,21 +53,15 @@ class MainActivity : ComponentActivity() {
                 
                 val agentState by agentCore.state.collectAsState()
                 
-                if (!accessibilityEnabled || !overlayEnabled) {
-                    PermissionScreen(
-                        accessibilityEnabled = accessibilityEnabled,
-                        overlayEnabled = overlayEnabled,
-                        onEnableAccessibility = { startAccessibilitySettings() },
-                        onEnableOverlay = { startOverlaySettings() }
-                    )
-                } else {
-                    DashboardScreen(
-                        onStartOverlay = { startOverlayService() },
-                        onOpenSettings = { openSettings() },
-                        graphifyRepo = graphifyRepo,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+                // Core dashboard remains available without optional device-control permissions.
+                // Accessibility and overlay access must be requested only when the user enables
+                // a feature that actually needs them.
+                DashboardScreen(
+                    onStartOverlay = { startOverlayService() },
+                    onOpenSettings = { openSettings() },
+                    graphifyRepo = graphifyRepo,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }
