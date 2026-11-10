@@ -1,6 +1,6 @@
 # OpenJarvis / Jarvis — Implementation Status
 
-Last reviewed: 2026-11-09  
+Last reviewed: 2026-11-10  
 Working branch: `jarvis/foundation-fixes-2026-11-09`
 
 This file separates changes visible in source from features that are still only planned. Static code review is not a substitute for a successful build or device test.
@@ -27,10 +27,13 @@ This file separates changes visible in source from features that are still only 
 - Automation commands are deliberately **not executed** yet. The worker records that execution is unavailable and fails closed; it must not report false success.
 - Disabled the unauthenticated TCP bridge until a secure local IPC/authentication design is implemented. The socket is loopback-only and rejects requests.
 - Added an Android CI workflow for Kotlin compilation, unit tests, and lint. It does not build or publish an APK.
+- Fixed Compose alpha/scale modifier usage in the dashboard.
+- Removed a call to a nonexistent VoiceManager initialization method; voice engines are constructed by VoiceManager.
+- Changed app startup so the basic dashboard is available without forcing Accessibility or overlay permissions. These permissions must remain optional and feature-specific.
 
 ## Important incomplete areas
 
-- No successful build, unit-test, lint, or device-test result has been confirmed yet. The latest recorded CI run (run `42719362949`) failed during Kotlin/KSP compilation. Its logs identified a missing closing brace in `AgentCore.kt`, outdated OkHttp request-body syntax in `MCPClient.kt`, and an unused DAO query parameter in `TaskNodeDao.kt`. Source fixes for those findings have been pushed to the working branch; a subsequent green CI run has not yet been verified.
+- No successful build, unit-test, lint, or device-test result has been confirmed yet. The latest recorded CI run (run `42719362949`) failed during Kotlin/KSP compilation. Its logs identified a missing closing brace in `AgentCore.kt`, outdated OkHttp request-body syntax in `MCPClient.kt`, and an unused DAO query parameter in `TaskNodeDao.kt`. Source fixes for those findings have been pushed to the working branch. Additional source corrections were made on 2026-11-10, but a subsequent green CI run has not yet been verified.
 - The Android notification listener is not registered in the manifest. Its existing broad notification handling must be replaced with explicit opt-in and a strict WhatsApp group allowlist for the requested `11-2` group before enabling it.
 - Voice recognition is not yet connected end-to-end to AgentCore; there is no verified always-on “Jarvis” wake phrase.
 - Spanish-first speech output and bilingual voice selection remain incomplete.
