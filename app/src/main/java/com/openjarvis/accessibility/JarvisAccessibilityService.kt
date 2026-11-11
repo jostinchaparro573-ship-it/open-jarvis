@@ -36,12 +36,11 @@ class JarvisAccessibilityService : AccessibilityService() {
         super.onDestroy()
     }
 
-    fun openAppByPackage(packageName: String) {
-        val intent = packageManager.getLaunchIntentForPackage(packageName)
-        if (intent != null) {
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(intent)
-        }
+    fun openAppByPackage(packageName: String): Boolean {
+        val intent = packageManager.getLaunchIntentForPackage(packageName) ?: return false
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
+        return true
     }
 
     fun openAppByLabel(label: String): Boolean {
