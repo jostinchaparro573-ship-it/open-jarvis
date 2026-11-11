@@ -10,6 +10,7 @@ object VoidColor {
     val Void950 = Color(0xFF05070D)
     val Void900 = Color(0xFF0A0D16)
     val Void800 = Color(0xFF111827)
+    val Void700 = Color(0xFF182235)
     val Void600 = Color(0xFF263247)
     val Violet = Color(0xFF718BFF)
     val VioletDim = Color(0xFF5369C8)
