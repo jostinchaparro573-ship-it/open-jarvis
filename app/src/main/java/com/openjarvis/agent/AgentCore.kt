@@ -236,21 +236,13 @@ fun executeTask(cleanCommand: String) {
                         }
                     }
                 }
-                Action.TAP -> {
-                    val service = JarvisAccessibilityService.instance
-                    val text = action.text
-                    if (service == null || text.isNullOrBlank() || !service.tapByText(text)) {
-                        _state.value = AgentState.Error("Could not tap the requested screen element")
-                        return false
-                    }
-                }
-                Action.TYPE -> {
-                    val service = JarvisAccessibilityService.instance
-                    val value = action.value
-                    if (service == null || value == null || !service.typeText(value)) {
-                        _state.value = AgentState.Error("Could not enter text; accessibility may be unavailable")
-                        return false
-                    }
+                Action.TAP, Action.TYPE -> {
+                    // Fail closed until the per-action confirmation UI is wired.
+                    // These actions can submit forms, send messages, or trigger purchases.
+                    _state.value = AgentState.Error(
+                        "Screen interaction is temporarily disabled until explicit action confirmation is available"
+                    )
+                    return false
                 }
                 Action.PRESS_BACK -> {
                     if (JarvisAccessibilityService.instance?.pressBack() != true) {
