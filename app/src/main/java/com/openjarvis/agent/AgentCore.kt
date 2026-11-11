@@ -315,7 +315,10 @@ fun executeTask(cleanCommand: String) {
 
 
     private fun requestsScreenReading(command: String): Boolean {
-        val normalized = command.lowercase().replace(Regex("\\s+"), " ").trim()
+        val normalized = java.text.Normalizer.normalize(
+            command.lowercase(),
+            java.text.Normalizer.Form.NFD
+        ).replace(Regex("[\\\\p{Mn}]"), "").replace(Regex("\\s+"), " ").trim()
         val explicitRequests = listOf(
             "lee la pantalla", "leer la pantalla", "lee lo que aparece",
             "que dice la pantalla", "que dice en pantalla", "que dice aqui",
