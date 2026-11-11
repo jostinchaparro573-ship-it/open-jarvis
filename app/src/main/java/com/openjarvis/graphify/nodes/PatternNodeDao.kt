@@ -1,6 +1,7 @@
 package com.openjarvis.graphify.nodes
 
 import androidx.room.*
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PatternNodeDao {
@@ -11,6 +12,8 @@ interface PatternNodeDao {
     suspend fun getByHash(hash: String): PatternNode?
     
     @Query("SELECT * FROM pattern_nodes WHERE lastSeen > :since AND confidence > :minConfidence ORDER BY confidence DESC")
+    fun observeActivePatterns(since: Long, minConfidence: Float = 0.3f): Flow<List<PatternNode>>
+    
     suspend fun getActivePatterns(since: Long, minConfidence: Float = 0.3f): List<PatternNode>
     
     @Insert(onConflict = OnConflictStrategy.REPLACE)
