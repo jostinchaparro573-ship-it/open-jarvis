@@ -57,7 +57,7 @@ class AIAppInteractor(private val context: Context) {
                 return readScreen()
             }
             ResponseExtraction.OCR_REQUIRED -> {
-                return screenReader.extractAllText()
+                return readScreen()
             }
             ResponseExtraction.COPY_BUTTON -> {
                 return tryCopyFromUI()
