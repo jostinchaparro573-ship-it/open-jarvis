@@ -300,7 +300,6 @@ private fun ProviderCard(name: String, subtitle: String, modifier: Modifier = Mo
 @Composable
 private fun TryItScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
     var command by remember { mutableStateOf("Open Chrome and search for weather") }
-    var isRunning by remember { mutableStateOf(false) }
     
     Column(
         modifier = Modifier.fillMaxSize()
@@ -342,30 +341,18 @@ private fun TryItScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
                 .background(VoidColor.Void900, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
-            if (isRunning) {
-                CircularProgressIndicator(color = VoidColor.Violet)
-            } else {
-                Text(
-                    "This quick test is not connected to the action engine yet.",
-                    color = VoidColor.TextDisabled
-                )
-            }
+            Text(
+                "This quick test is not connected to the action engine yet.",
+                color = VoidColor.TextDisabled
+            )
         }
         
         Spacer(modifier = Modifier.height(16.dp))
         
         Button(
-            onClick = {
-                isRunning = true
-                lifecycleScope.launch {
-                    delay(2000)
-                    isRunning = false
-                    onSuccess()
-                }
-            },
+            onClick = onSuccess,
             colors = ButtonDefaults.buttonColors(containerColor = VoidColor.Violet),
             modifier = Modifier.fillMaxWidth(),
-            enabled = !isRunning
         ) {
             Text("Skip test for now")
         }
