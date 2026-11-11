@@ -113,10 +113,15 @@ fun executeTask(cleanCommand: String) {
                 
                 val plan = taskRouter.analyze(cleanCommand)
                 
-                _state.value = AgentState.Running("reading screen...")
+                val screenReadAuthorized = requestsScreenReading(cleanCommand)
+                _state.value = AgentState.Running(
+                    if (screenReadAuthorized) "reading requested screen content..." else "preparing task..."
+                )
                 
-                val screenText = withContext(Dispatchers.IO) {
-                    screenReader?.extractAllText().orEmpty()
+                val screenText = if (screenReadAuthorized) {
+                    withContext(Dispatchers.IO) { screenReader?.extractAllText().orEmpty() }
+                } else {
+                    ""
                 }
                 
                 _state.value = AgentState.Running("getting context...")
@@ -151,7 +156,7 @@ fun executeTask(cleanCommand: String) {
                         
                         _state.value = AgentState.Running("executing ${actions.size} actions...")
                         
-                        val executionSucceeded = executeActions(actions)
+                        val executionSucceeded = executeActions(actions, screenReadAuthorized)
                         if (!executionSucceeded) {
                             val reason = (state.value as? AgentState.Error)?.message ?: "Action failed"
                             graphifyRepo.logTask(cleanCommand, "failed: $reason", "", latency)
@@ -207,7 +212,7 @@ fun executeTask(cleanCommand: String) {
     
     suspend fun getAIAppCount(): Int = appAnalyzer.getAICount()
 
-    private suspend fun executeActions(actions: List<Action>): Boolean {
+    private suspend fun executeActions(actions: List<Action>, allowScreenRead: Boolean): Boolean {
         for ((index, action) in actions.withIndex()) {
             _state.value = AgentState.Running("action ${index + 1}/${actions.size}")
             
@@ -285,6 +290,10 @@ fun executeTask(cleanCommand: String) {
                     }
                 }
                 Action.EXTRACT_TEXT -> {
+                    if (!allowScreenRead) {
+                        _state.value = AgentState.Error("Screen reading requires an explicit user request")
+                        return false
+                    }
                     val outputKey = action.outputKey ?: "page_text"
                     val text = screenReader?.extractAllText()
                     if (text == null) {
@@ -302,6 +311,21 @@ fun executeTask(cleanCommand: String) {
             kotlinx.coroutines.delay(500)
         }
         return true
+    }
+
+
+    private fun requestsScreenReading(command: String): Boolean {
+        val normalized = command.lowercase().replace(Regex("\\s+"), " ").trim()
+        val explicitRequests = listOf(
+            "lee la pantalla", "leer la pantalla", "lee lo que aparece",
+            "que dice la pantalla", "que dice en pantalla", "que dice aqui",
+            "lee esto en pantalla", "extrae el texto", "resume esta pagina",
+            "resume la pagina", "analiza esta pantalla", "describe lo que ves",
+            "read the screen", "what is on my screen", "what's on my screen",
+            "what is on screen", "read this page", "extract the text",
+            "summarize this page", "analyze this screen"
+        )
+        return explicitRequests.any { normalized.contains(it) }
     }
 
     private fun findPackageByLabel(label: String): String? {
