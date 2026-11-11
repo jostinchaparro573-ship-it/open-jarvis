@@ -4,7 +4,7 @@ import android.content.Context
 import com.openjarvis.graphify.nodes.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.util.Calendar
 
@@ -55,9 +55,8 @@ class GraphifyRepository(context: Context) {
         taskNodeDao.getRecentTasks(limit)
     }
 
-    fun getRecentTasksFlow(limit: Int = 10): Flow<List<TaskNode>> = flow {
-        emit(taskNodeDao.getRecentTasks(limit))
-    }
+    fun getRecentTasksFlow(limit: Int = 10): Flow<List<TaskNode>> =
+        taskNodeDao.observeRecentTasks(limit)
 
     suspend fun searchTasks(query: String): List<TaskNode> = withContext(Dispatchers.IO) {
         taskNodeDao.getTasksByCommand(query, 10)
@@ -76,21 +75,18 @@ class GraphifyRepository(context: Context) {
         TaskStats(total, today, failRate)
     }
 
-    fun getTopAppsFlow(limit: Int = 5): Flow<List<AppNode>> = flow {
-        emit(appNodeDao.getMostUsedApps(limit))
-    }
+    fun getTopAppsFlow(limit: Int = 5): Flow<List<AppNode>> =
+        appNodeDao.observeMostUsedApps(limit)
 
-    fun getTopContactFlow(): Flow<List<ContactNode>> = flow {
-        emit(contactNodeDao.getRecentContacts(1))
-    }
+    fun getTopContactFlow(): Flow<List<ContactNode>> =
+        contactNodeDao.observeRecentContacts(1)
 
-    fun getTopProviderFlow(): Flow<List<ProviderNode>> = flow {
-        emit(providerNodeDao.getTopProviders(1))
-    }
+    fun getTopProviderFlow(): Flow<List<ProviderNode>> =
+        providerNodeDao.observeTopProviders(1)
 
-    fun getActivePatternCountFlow(): Flow<Int> = flow {
+    fun getActivePatternCountFlow(): Flow<Int> {
         val cutoff = System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000
-        emit(patternNodeDao.getActivePatterns(cutoff, 0.3f).size)
+        return patternNodeDao.observeActivePatterns(cutoff, 0.3f).map { it.size }
     }
 
     fun buildMemoryContext(command: String): String = kotlinx.coroutines.runBlocking {
