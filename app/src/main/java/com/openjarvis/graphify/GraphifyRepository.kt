@@ -91,7 +91,11 @@ class GraphifyRepository(context: Context) {
 
     fun buildMemoryContext(command: String): String = kotlinx.coroutines.runBlocking {
         withContext(Dispatchers.IO) {
-            val tasks = taskNodeDao.getRecentTasks(10)
+            val tasks = if (command.isBlank()) {
+                taskNodeDao.getRecentTasks(10)
+            } else {
+                taskNodeDao.getTasksByCommand(command.trim(), 10)
+            }
             val patterns = patternNodeDao.getActivePatterns(
                 System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000,
                 0.3f
