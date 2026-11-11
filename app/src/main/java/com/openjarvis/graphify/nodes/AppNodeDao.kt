@@ -11,6 +11,7 @@ interface AppNodeDao {
     @Query("SELECT * FROM app_nodes ORDER BY useCount DESC LIMIT :limit")
     fun observeMostUsedApps(limit: Int): Flow<List<AppNode>>
     
+    @Query("SELECT * FROM app_nodes ORDER BY useCount DESC LIMIT :limit")
     suspend fun getMostUsedApps(limit: Int): List<AppNode>
     
     @Query("SELECT * FROM app_nodes WHERE packageName = :packageName LIMIT 1")

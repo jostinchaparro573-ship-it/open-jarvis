@@ -8,6 +8,7 @@ interface ProviderNodeDao {
     @Query("SELECT * FROM provider_nodes ORDER BY useCount DESC LIMIT :limit")
     fun observeTopProviders(limit: Int): Flow<List<ProviderNode>>
     
+    @Query("SELECT * FROM provider_nodes ORDER BY useCount DESC LIMIT :limit")
     suspend fun getTopProviders(limit: Int): List<ProviderNode>
     
     @Query("SELECT * FROM provider_nodes WHERE providerName = :name LIMIT 1")
