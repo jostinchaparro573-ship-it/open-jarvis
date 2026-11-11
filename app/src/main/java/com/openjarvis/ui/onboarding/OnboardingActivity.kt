@@ -23,10 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.lifecycleScope
 import com.openjarvis.ui.theme.VoidColor
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 class OnboardingActivity : ComponentActivity() {
     
@@ -349,7 +346,7 @@ private fun TryItScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
                 CircularProgressIndicator(color = VoidColor.Violet)
             } else {
                 Text(
-                    "Press Run to execute",
+                    "This quick test is not connected to the action engine yet.",
                     color = VoidColor.TextDisabled
                 )
             }
@@ -370,7 +367,7 @@ private fun TryItScreen(onBack: () -> Unit, onSuccess: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             enabled = !isRunning
         ) {
-            Text(if (isRunning) "Running..." else "Run This")
+            Text("Skip test for now")
         }
     }
 }
