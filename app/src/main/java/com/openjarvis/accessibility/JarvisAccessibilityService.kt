@@ -16,11 +16,12 @@ class JarvisAccessibilityService : AccessibilityService() {
         instance = this
         
         val info = AccessibilityServiceInfo().apply {
-            eventTypes = AccessibilityEvent.TYPES_ALL_MASK
+            // Subscribe only to window changes needed for foreground interaction.
+            // Do not request broad interactive-window or enhanced web access.
+            eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
-            flags = AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or 
-                   AccessibilityServiceInfo.FLAG_REQUEST_ENHANCED_WEB_ACCESSIBILITY
-            notificationTimeout = 100
+            flags = 0
+            notificationTimeout = 250
         }
         serviceInfo = info
     }
