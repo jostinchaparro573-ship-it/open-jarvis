@@ -235,7 +235,7 @@ fun SettingsScreen(
                             Icon(
                                 imageVector = Icons.Default.Mic,
                                 contentDescription = null,
-                                tint = VoidColor.Green,
+                                tint = VoidColor.TextDisabled,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
@@ -690,13 +690,13 @@ private fun PermissionRow(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(VoidColor.Red.copy(alpha = 0.12f)),
+                    .background(VoidColor.TextDisabled.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    tint = VoidColor.Red,
+                    tint = VoidColor.TextDisabled,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -719,7 +719,7 @@ private fun PermissionRow(
                         fontFamily = FontFamily.Default,
                         fontWeight = FontWeight(400),
                         fontSize = 11.sp,
-                        color = VoidColor.Red
+                        color = VoidColor.TextDisabled
                     )
                 )
             }
@@ -727,7 +727,7 @@ private fun PermissionRow(
             Icon(
                 imageVector = Icons.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = VoidColor.Red
+                tint = VoidColor.TextDisabled
             )
         }
     }
