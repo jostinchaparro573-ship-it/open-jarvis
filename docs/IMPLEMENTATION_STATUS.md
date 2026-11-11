@@ -33,7 +33,7 @@ This file separates changes visible in source from features that are still only 
 
 ## Important incomplete areas
 
-- CI validation is mixed and must be read per commit: run `43104889690` passed Kotlin compilation, unit tests, and lint at commit `6740355e`; later changes were made after that success. The latest run before the current fixes, `43115522287` at commit `55ebb671`, failed in Kotlin compilation because `OverlayService.kt` imported ComposeView's internal `setContent` symbol and could not resolve `ViewTreeLifecycleOwner`. The latest branch now contains a correction removing the invalid import, cleaning duplicate task loading, and explicitly declaring lifecycle-runtime; a fresh CI run is required to verify it. Unit tests and lint were skipped after the compile failure. No physical-device test or APK build has been verified.
+- CI validation is mixed and must be read per commit: run `43104889690` passed Kotlin compilation, unit tests, and lint at commit `6740355e`; later changes were made after that success. The latest run before the current fixes, `43115522287` at commit `55ebb671`, failed in Kotlin compilation because `OverlayService.kt` imported ComposeView's internal `setContent` symbol and could not resolve `ViewTreeLifecycleOwner`. The latest branch now replaces the unresolved ViewTreeLifecycleOwner reference with the AndroidX lifecycle-owner view-tree tag and keeps the lifecycle dependency explicit; CI must verify that approach. Unit tests and lint were skipped after the compile failure. No physical-device test or APK build has been verified.
 - The Android notification listener is not registered in the manifest. Its existing broad notification handling must be replaced with explicit opt-in and a strict WhatsApp group allowlist for the requested `11-2` group before enabling it.
 - Voice recognition is not yet connected end-to-end to AgentCore; there is no verified always-on “Jarvis” wake phrase.
 - Spanish-first speech output and bilingual voice selection remain incomplete.
@@ -47,6 +47,10 @@ This file separates changes visible in source from features that are still only 
 The project scope now includes a future voice-call agent that can, only after the user explicitly authorizes each call, contact businesses such as dental clinics, identify itself as an AI assistant, speak naturally in Spanish and English, ask about availability, negotiate alternative appointment times, read back the proposed details, and book only after the user-defined confirmation policy is satisfied. It must never impersonate a human, invent calendar availability, disclose unnecessary personal data, or claim a booking succeeded without confirmation from the recipient or booking system.
 
 This capability is **planned, not implemented**. It depends on end-to-end speech, real-time conversational audio, a compliant outbound telephony/VoIP provider, call-state handling, user consent and confirmation gates, and an appointment/calendar record with verified outcomes. Android SIM-call restrictions mean the design must not assume unrestricted control of native cellular calls.
+
+## Safety hardening in progress
+
+AgentCore now fails closed for generic screen TAP and TYPE actions until a per-action confirmation UI is implemented and wired. This temporarily disables those interactions rather than allowing a model-generated tap or text entry to submit a form, send a message, or trigger a purchase without user review. This is an intentional safety limitation, not a completed confirmation workflow.
 
 ## Release rule
 
