@@ -1,10 +1,13 @@
 package com.openjarvis.graphify.nodes
 
 import androidx.room.*
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ProviderNodeDao {
     @Query("SELECT * FROM provider_nodes ORDER BY useCount DESC LIMIT :limit")
+    fun observeTopProviders(limit: Int): Flow<List<ProviderNode>>
+    
     suspend fun getTopProviders(limit: Int): List<ProviderNode>
     
     @Query("SELECT * FROM provider_nodes WHERE providerName = :name LIMIT 1")
