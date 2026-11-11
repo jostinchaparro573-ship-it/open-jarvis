@@ -1,10 +1,13 @@
 package com.openjarvis.graphify.nodes
 
 import androidx.room.*
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskNodeDao {
     @Query("SELECT * FROM task_nodes ORDER BY timestamp DESC LIMIT :limit")
+    fun observeRecentTasks(limit: Int): Flow<List<TaskNode>>
+    
     suspend fun getRecentTasks(limit: Int): List<TaskNode>
     
     @Query("SELECT * FROM task_nodes WHERE command LIKE '%' || :command || '%' ORDER BY timestamp DESC LIMIT :limit")
