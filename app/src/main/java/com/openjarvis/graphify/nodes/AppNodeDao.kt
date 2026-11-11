@@ -1,6 +1,7 @@
 package com.openjarvis.graphify.nodes
 
 import androidx.room.*
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AppNodeDao {
@@ -8,6 +9,8 @@ interface AppNodeDao {
     suspend fun getRecentApps(limit: Int): List<AppNode>
     
     @Query("SELECT * FROM app_nodes ORDER BY useCount DESC LIMIT :limit")
+    fun observeMostUsedApps(limit: Int): Flow<List<AppNode>>
+    
     suspend fun getMostUsedApps(limit: Int): List<AppNode>
     
     @Query("SELECT * FROM app_nodes WHERE packageName = :packageName LIMIT 1")
