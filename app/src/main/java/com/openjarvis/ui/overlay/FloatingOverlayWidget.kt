@@ -102,7 +102,7 @@ fun FloatingOverlayWidget(
                     )
                 ) + fadeIn(animationSpec = tween(150, delayMillis = 240))) togetherWith (shrinkHorizontally() + shrinkVertically() + fadeOut())
             } else {
-                (shrinkHorizontally(
+                (expandHorizontally() + expandVertically() + fadeIn(animationSpec = tween(150))) togetherWith (shrinkHorizontally(
                     animationSpec = spring(
                         stiffness = Spring.StiffnessMedium,
                         dampingRatio = 0.8f
@@ -112,7 +112,7 @@ fun FloatingOverlayWidget(
                         stiffness = Spring.StiffnessMedium,
                         dampingRatio = 0.8f
                     )
-                ) + fadeIn(animationSpec = tween(150))) togetherWith (expandHorizontally() + expandVertically() + fadeOut())
+                ) + fadeOut())
             }
         },
         label = "overlay_expand"
