@@ -245,3 +245,35 @@ Where possible, some milestones can run in parallel:
 | OCR accuracy | Poor M2 quality | Fallback to UI tree extraction |
 | Local model RAM | M7 fails on 4GB | Use Phi-3 Mini, optimize inference |
 | Play Store policy | Rejection | No restricted permissions |
+
+---
+
+## M9: Natural Voice Calling & Appointment Booking (planned)
+
+**Status:** Planned — not implemented.
+
+### Goal
+
+Allow Jarvis to place user-authorized outbound calls and hold natural, transparent conversations with businesses to request information or arrange appointments.
+
+### Deliverables
+
+- [ ] Real-time conversational speech pipeline with interruption handling and natural turn-taking.
+- [ ] Outbound telephony/VoIP provider integration with call status, timeouts, and failure handling.
+- [ ] AI disclosure at the start of every call; never impersonate a human.
+- [ ] User-approved call purpose, target, and minimum personal information to disclose.
+- [ ] Appointment negotiation: ask for availability, compare alternatives, confirm date/time/time zone and service details.
+- [ ] Explicit booking confirmation policy; never book outside the user's authorization.
+- [ ] Persist confirmed appointment details and provide a concise call transcript/summary with privacy controls.
+- [ ] Spanish-first voice with English support; graceful handoff to the user when asked, uncertain, or dealing with sensitive decisions.
+- [ ] Tests for misheard dates, ambiguous times, price surprises, pressure to disclose data, unexpected fees, refusal, disconnection, and false booking claims.
+
+### Acceptance Criteria
+
+- [ ] User explicitly approves each outbound call before dialing.
+- [ ] Jarvis clearly identifies itself as an AI assistant.
+- [ ] Jarvis can handle natural interruptions and clarifying questions without losing context.
+- [ ] No appointment is booked until the recipient's availability and all appointment details are repeated and authorized.
+- [ ] Booking success is recorded only after confirmation from the recipient or trusted booking system.
+- [ ] If the call is ambiguous, disconnected, or the business requests an unapproved action, Jarvis stops and reports the unresolved state.
+- [ ] No recording or transcript retention beyond the user's configured consent and retention settings.
