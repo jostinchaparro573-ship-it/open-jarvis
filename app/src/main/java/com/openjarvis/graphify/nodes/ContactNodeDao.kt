@@ -1,10 +1,13 @@
 package com.openjarvis.graphify.nodes
 
 import androidx.room.*
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ContactNodeDao {
     @Query("SELECT * FROM contact_nodes ORDER BY lastContacted DESC LIMIT :limit")
+    fun observeRecentContacts(limit: Int): Flow<List<ContactNode>>
+    
     suspend fun getRecentContacts(limit: Int): List<ContactNode>
     
     @Query("SELECT * FROM contact_nodes WHERE name LIKE :name OR phoneNumber LIKE :phone ORDER BY contactCount DESC LIMIT 1")
