@@ -1,127 +1,114 @@
 package com.openjarvis.agent
 
 import android.content.Context
+import com.openjarvis.accessibility.JarvisAccessibilityService
 import com.openjarvis.accessibility.ScreenReader
-import com.openjarvis.graphify.GraphifyRepository
 import com.openjarvis.llm.UniversalAdapter
 import kotlinx.coroutines.delay
+import org.json.JSONObject
 
-class SelfHealingExecutor(private val context: Context) {
-    
-    private val screenReader = ScreenReader(context)
-    private val graphifyRepo = GraphifyRepository(context)
-    private val llm = UniversalAdapter.getModelManager(context)
-    
+/**
+ * Retries only actions whose execution can be verified locally.
+ * If accessibility is unavailable or an action cannot be verified, fails closed.
+ */
+class SelfHealingExecutor(private val appContext: Context) {
+
+    private val llm = UniversalAdapter(appContext.applicationContext)
     private val maxAttempts = 3
     private val baseDelayMs = 1000L
-    
+
     suspend fun executeWithHealing(
         action: Action,
-        context: ExecutionContext,
+        executionContext: ExecutionContext,
         attempt: Int = 1
     ): ActionResult {
-        
-        val result = tryExecuteAction(action, context)
-        
-        if (result.success) return result
-        
-        if (attempt >= maxAttempts) {
-            return ActionResult.Failed("Could not complete after $maxAttempts attempts")
-        }
-        
-        val currentScreen = screenReader.extractAllText()
-        
-        val healingPrompt = buildHealingPrompt(action, context, currentScreen, attempt)
-        
-        val alternativeResponse = try {
-            llm.complete(healingPrompt.first, healingPrompt.second)
-        } catch (e: Exception) {
-            null
-        }
-        
+        val result = tryExecuteAction(action)
+        if (result is ActionResult.Success) return result
+        if (attempt >= maxAttempts) return result
+
+        val service = JarvisAccessibilityService.instance ?: return result
+        val screenText = ScreenReader(service).extractAllText().take(500)
+        val prompt = """
+            An action failed.
+            Action: ${action.action}
+            Expected state: ${executionContext.expectedState ?: "task completion"}
+            Current screen text: $screenText
+            Attempt: $attempt of $maxAttempts.
+            Suggest one alternative action as JSON with keys action, text, value, package.
+            Do not suggest sending messages, deleting data, purchases, or changing security settings.
+        """.trimIndent()
+
+        val alternative = llm.complete(
+            "Return one safe, reversible UI action as JSON. If unsure, return an empty response.",
+            prompt
+        ).getOrNull()
+
         delay(baseDelayMs * attempt)
-        
-        if (alternativeResponse != null) {
-            val alternativeAction = parseActionFromLLM(alternativeResponse)
-            if (alternativeAction != null) {
-                return executeWithHealing(alternativeAction, context, attempt + 1)
-            }
+        val alternativeAction = alternative?.let(::parseActionFromLLM)
+        if (alternativeAction != null) {
+            return executeWithHealing(alternativeAction, executionContext, attempt + 1)
         }
-        
-        return executeWithHealing(action, context, attempt + 1)
+        return result
     }
-    
-    private fun tryExecuteAction(action: Action, context: ExecutionContext): ActionResult {
+
+    private fun tryExecuteAction(action: Action): ActionResult {
+        val service = JarvisAccessibilityService.instance
+            ?: return ActionResult.Failed("Accessibility service is not enabled")
+
         return try {
-            val service = com.openjarvis.accessibility.JarvisAccessibilityService.instance
-            
             when (action.action) {
                 Action.TAP -> {
-                    val tapped = service?.tapByText(action.text ?: "")
-                    ActionResult.Success(if (tapped) "tapped ${action.text}" else "tap failed")
+                    val ok = service.tapByText(action.text.orEmpty())
+                    if (ok) ActionResult.Success("Tapped target")
+                    else ActionResult.Failed("Tap target was not found or could not be activated")
                 }
                 Action.TYPE -> {
-                    val typed = service?.typeText(action.value ?: "")
-                    ActionResult.Success(if (typed) "typed ${action.value}" else "type failed")
+                    val ok = service.typeText(action.value.orEmpty())
+                    if (ok) ActionResult.Success("Entered text")
+                    else ActionResult.Failed("Focused text field was not available")
                 }
                 Action.OPEN_APP -> {
-                    service?.openAppByPackage(action.packageName ?: "")
-                    ActionResult.Success("opened ${action.packageName}")
+                    val packageName = action.packageName
+                        ?: return ActionResult.Failed("Missing application package")
+                    val launched = service.openAppByPackage(packageName)
+                    if (launched) ActionResult.Success("Application launch requested")
+                    else ActionResult.Failed("Application could not be opened")
                 }
                 Action.PRESS_BACK -> {
-                    service?.pressBack()
-                    ActionResult.Success("pressed back")
+                    if (service.pressBack()) ActionResult.Success("Pressed back")
+                    else ActionResult.Failed("Back action was not accepted")
                 }
-                else -> ActionResult.Success("action ${action.action} executed")
+                else -> ActionResult.Failed("Action is not supported by the verified executor")
             }
-        } catch (e: Exception) {
-            ActionResult.Failed(e.message ?: "Unknown error")
+        } catch (error: Exception) {
+            ActionResult.Failed(error.message ?: "Action failed")
         }
     }
-    
-    private fun buildHealingPrompt(
-        action: Action,
-        context: ExecutionContext,
-        currentScreen: String,
-        attempt: Int
-    ): Pair<String, String> {
-        val system = """
-Action failed: ${action.description ?: action.action}
-Expected to see: ${context.expectedState ?: "task completion"}
-Current screen shows: ${currentScreen.take(500)}
-Attempt: $attempt/$maxAttempts
 
-What went wrong and what alternative action should I try?
-Respond with a single alternative Action JSON.
-        """.trimIndent()
-        
-        return system to """
-The action failed. Current screen: "$currentScreen"
-Give me one alternative action that might work.
-        """
-    }
-    
-    private fun parseActionFromLLM(llmResponse: String): Action? {
-        return try {
-            val json = org.json.JSONObject(llmResponse.trim())
-            Action(
-                action = json.getString("action"),
-                text = json.optString("text", null),
-                value = json.optString("value", null),
-                packageName = json.optString("package", null)
-            )
-        } catch (e: Exception) {
+    private fun parseActionFromLLM(response: String): Action? = try {
+        val json = JSONObject(response.trim())
+        val actionName = json.optString("action")
+        if (actionName !in setOf(Action.TAP, Action.TYPE, Action.OPEN_APP, Action.PRESS_BACK)) {
             null
+        } else {
+            Action(
+                action = actionName,
+                text = json.optString("text").takeIf { it.isNotBlank() },
+                value = json.optString("value").takeIf { it.isNotBlank() },
+                packageName = json.optString("package").takeIf { it.isNotBlank() }
+            )
         }
+    } catch (_: Exception) {
+        null
     }
-    
+
     data class ExecutionContext(
         val expectedState: String?,
         val phaseId: String,
         val previousPhaseOutcome: String?,
         val screenBefore: String
     )
-    
+
     sealed class ActionResult {
         data class Success(val message: String) : ActionResult()
         data class Failed(val reason: String) : ActionResult()
