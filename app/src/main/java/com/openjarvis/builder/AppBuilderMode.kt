@@ -205,7 +205,7 @@ class AppBuilderMode(private val context: Context) {
             permissions = json.optJSONArray("permissions")?.let { arr ->
                 (0 until arr.length()).map { arr.getString(it) }
             } ?: emptyList(),
-            complexity = Complexity.valueOf(json.optString("complexity", "SIMPLE"))
+            complexity = AppBuilderMode.Complexity.valueOf(json.optString("complexity", "SIMPLE"))
         )
     }
     
@@ -215,7 +215,7 @@ class AppBuilderMode(private val context: Context) {
     )
     
     enum class FileType {
-        GRADLE, GRADLE_APP, MANIFEST, KOTLIN, XML, PROPERTIES, MARKDOWN
+        GRADLE, GRADLE_APP, MANIFEST, KOTLIN, XML, PROPERTIES, PROGUARD, MARKDOWN
     }
 }
 
