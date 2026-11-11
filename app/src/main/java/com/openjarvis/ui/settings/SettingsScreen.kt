@@ -131,7 +131,8 @@ fun SettingsScreen(
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
-                TestConnectionButton(
+                SaveProviderButton(
+                    providerName = selectedProvider,
                     apiKey = apiKey,
                     baseUrl = baseUrl,
                     model = model,
@@ -150,7 +151,7 @@ fun SettingsScreen(
                 
                 SettingsToggleRow(
                     title = "Voice Assistant",
-                    subtitle = "Push to Talk · VAD supported",
+                    subtitle = "Push to Talk · manual activation",
                     enabled = voiceEnabled,
                     onToggle = { voiceEnabled = !voiceEnabled }
                 )
@@ -249,7 +250,7 @@ fun SettingsScreen(
                                     )
                                 )
                                 Text(
-                                    text = "Google Speech · Online",
+                                    text = "Speech recognition · not connected yet",
                                     style = TextStyle(
                                         fontFamily = FontFamily.Default,
                                         fontWeight = FontWeight(400),
@@ -259,7 +260,7 @@ fun SettingsScreen(
                                 )
                             }
                             Text(
-                                text = "Ready",
+                                text = "Not configured",
                                 style = TextStyle(
                                     fontFamily = FontFamily.Default,
                                     fontWeight = FontWeight(500),
@@ -273,20 +274,20 @@ fun SettingsScreen(
                 
                 Spacer(modifier = Modifier.height(32.dp))
                 
-                SectionLabel("PERMISSIONS")
+                SectionLabel("OPTIONAL PERMISSIONS")
                 
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 PermissionRow(
                     title = "Accessibility",
-                    subtitle = "Required — Tap to enable"
+                    subtitle = "Optional · setup pending"
                 )
                 
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 PermissionRow(
                     title = "Overlay",
-                    subtitle = "Required — Tap to enable"
+                    subtitle = "Optional · setup pending"
                 )
                 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -575,68 +576,24 @@ fun FloatingLabelTextField(
 }
 
 @Composable
-private fun TestConnectionButton(
+private fun SaveProviderButton(
+    providerName: String,
     apiKey: String,
     baseUrl: String,
     model: String,
     onSave: (String, String, String, String) -> Unit
 ) {
-    var testState by remember { mutableStateOf<TestState>(TestState.Idle) }
-    
-    val borderColor by animateColorAsState(
-        targetValue = when (testState) {
-            is TestState.Idle -> VoidColor.VioletDim
-            is TestState.Loading -> VoidColor.Violet
-            is TestState.Success -> VoidColor.Green
-            is TestState.Error -> VoidColor.Red
-        },
-        animationSpec = tween(200),
-        label = "btn_border"
-    )
-    
-    val textColor = when (testState) {
-        is TestState.Idle -> VoidColor.Violet
-        is TestState.Loading -> VoidColor.Violet
-        is TestState.Success -> VoidColor.Green
-        is TestState.Error -> VoidColor.Red
-    }
-    
     OutlinedButton(
-        onClick = {
-            onSave("Groq", baseUrl, apiKey, model)
-            testState = TestState.Success(150)
-        },
+        onClick = { onSave(providerName, baseUrl, apiKey, model) },
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, borderColor),
+        border = BorderStroke(1.dp, VoidColor.VioletDim),
         colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = textColor
+            contentColor = VoidColor.Violet
         )
     ) {
-        when (val state = testState) {
-            is TestState.Idle -> Text("Test Connection")
-            is TestState.Loading -> CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp,
-                color = VoidColor.Violet
-            )
-            is TestState.Success -> {
-                Icon(Icons.Default.Check, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Connected — ${state.ms}ms")
-            }
-            is TestState.Error -> {
-                Text("Failed — check key")
-            }
-        }
+        Text("Save provider settings")
     }
-}
-
-sealed class TestState {
-    data object Idle : TestState()
-    data object Loading : TestState()
-    data class Success(val ms: Long) : TestState()
-    data class Error(val message: String) : TestState()
 }
 
 @Composable
@@ -714,7 +671,6 @@ private fun PermissionRow(
     title: String,
     subtitle: String
 ) {
-    val isGranted by remember { mutableStateOf(false) }
     
     Surface(
         modifier = Modifier
