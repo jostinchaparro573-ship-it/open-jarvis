@@ -4,6 +4,8 @@ import android.content.Context
 import com.openjarvis.graphify.nodes.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.util.Calendar
@@ -160,7 +162,7 @@ class GraphifyRepository(context: Context) {
         }
 
         emit(suggestions.take(3))
-    }
+    }.flowOn(Dispatchers.IO)
 
     suspend fun insertContact(contact: ContactNode): Long = withContext(Dispatchers.IO) {
         contactNodeDao.insert(contact)
