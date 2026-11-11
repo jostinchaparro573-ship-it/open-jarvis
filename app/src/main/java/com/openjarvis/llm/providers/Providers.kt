@@ -236,7 +236,7 @@ class OpenAIProvider(
 }
 
 class OllamaProvider(
-    private val endpoint: String,
+    override val baseUrl: String,
     private val model: String = "llama3"
 ) : LLMProvider {
     
@@ -263,7 +263,7 @@ class OllamaProvider(
             }.toString()
             
             val request = Request.Builder()
-                .url("$endpoint/api/chat")
+                .url("$baseUrl/api/chat")
                 .addHeader("Content-Type", "application/json")
                 .post(requestBody.toRequestBody("application/json".toMediaType()))
                 .build()
@@ -290,7 +290,7 @@ class OllamaProvider(
             }.toString()
             
             val request = Request.Builder()
-                .url("$endpoint/api/tags")
+                .url("$baseUrl/api/tags")
                 .post(requestBody.toRequestBody("application/json".toMediaType()))
                 .build()
             
@@ -305,7 +305,7 @@ class OllamaProvider(
 }
 
 class CustomProvider(
-    private val endpoint: String,
+    override val baseUrl: String,
     private val apiKey: String = "",
     private val model: String = "gpt-4o-mini"
 ) : LLMProvider {
@@ -334,7 +334,7 @@ class CustomProvider(
             }.toString()
             
             val builder = Request.Builder()
-                .url("$endpoint/chat/completions")
+                .url("$baseUrl/chat/completions")
                 .addHeader("Content-Type", "application/json")
                 .post(requestBody.toRequestBody("application/json".toMediaType()))
             
@@ -364,7 +364,7 @@ class CustomProvider(
             val startTime = System.currentTimeMillis()
             
             val builder = Request.Builder()
-                .url("$endpoint/models")
+                .url("$baseUrl/models")
                 .get()
             
             if (apiKey.isNotBlank()) {
