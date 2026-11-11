@@ -87,8 +87,26 @@ class MainActivity : ComponentActivity() {
     }
     
     private fun startOverlayService() {
-        startService(Intent(this, OverlayService::class.java))
-        Toast.makeText(this, "Jarvis is active", Toast.LENGTH_SHORT).show()
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(
+                this,
+                "Allow display over other apps to enable the Jarvis overlay",
+                Toast.LENGTH_LONG
+            ).show()
+            startOverlaySettings()
+            return
+        }
+
+        try {
+            OverlayService.start(this)
+            Toast.makeText(this, "Starting Jarvis service...", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(
+                this,
+                "Could not start Jarvis: ${e.message ?: "unknown error"}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
     
     private fun openSettings() {
