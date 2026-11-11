@@ -77,10 +77,10 @@ class SkillEngine(private val context: Context) {
                 val obj = arr.getJSONObject(i)
                 Action(
                     action = obj.getString("action"),
-                    packageName = obj.optString("package", null),
-                    label = obj.optString("label", null),
-                    text = obj.optString("text", null),
-                    value = obj.optString("value", null)
+                    packageName = obj.optString("package").takeIf { it.isNotBlank() && it != "null" },
+                    label = obj.optString("label").takeIf { it.isNotBlank() && it != "null" },
+                    text = obj.optString("text").takeIf { it.isNotBlank() && it != "null" },
+                    value = obj.optString("value").takeIf { it.isNotBlank() && it != "null" }
                 )
             }
         }
