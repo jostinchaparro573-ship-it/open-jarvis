@@ -36,14 +36,13 @@ class SocketServerTest {
 
     @Test
     fun `escapeJson escapes special characters`() {
-        val input = "hello\\nworld\"test\\tvalue"
+        val input = "hello\nworld\"test\tvalue"
         val escaped = SocketServer.escapeJson(input)
 
-        assertTrue(escaped.contains("\\\\n"))
-        assertTrue(escaped.contains("\\\\""))
-        assertTrue(escaped.contains("\\\\t"))
+        assertTrue(escaped.contains("\\n"))
+        assertTrue(escaped.contains("\\\""))
+        assertTrue(escaped.contains("\\t"))
     }
-
     @Test
     fun `createErrorResponse formats request and error`() {
         val response = SocketServer.createErrorResponse("req123", "test error")
