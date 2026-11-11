@@ -15,7 +15,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Icon
@@ -99,7 +99,7 @@ fun FloatingOverlayWidget(
                         stiffness = 260f,
                         dampingRatio = 0.8f
                     )
-                ) + fadeIn(animationSpec = tween(150, delayMillis = 240)))
+                ) + fadeIn(animationSpec = tween(150, delayMillis = 240))) togetherWith (shrinkHorizontally() + shrinkVertically() + fadeOut())
             } else {
                 (shrinkHorizontally(
                     animationSpec = spring(
@@ -111,7 +111,7 @@ fun FloatingOverlayWidget(
                         stiffness = Spring.StiffnessMedium,
                         dampingRatio = 0.8f
                     )
-                ) + fadeOut(animationSpec = tween(100)))
+                ) + fadeOut(animationSpec = tween(100))) togetherWith (expandHorizontally() + expandVertically() + fadeIn())
             }
         },
         label = "overlay_expand"
@@ -597,7 +597,7 @@ private fun InputRowWithVoice(
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowUp,
+                    imageVector = Icons.Filled.KeyboardArrowUp,
                     contentDescription = "Send",
                     tint = Color.White,
                     modifier = Modifier.size(16.dp)
@@ -609,7 +609,7 @@ private fun InputRowWithVoice(
 
 @Composable
 private fun DividerLine() {
-    HorizontalDivider(
+    Divider(
         modifier = Modifier.fillMaxWidth(),
         thickness = 1.dp,
         color = VoidColor.Void600
