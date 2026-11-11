@@ -7,14 +7,16 @@ import kotlinx.coroutines.delay
 
 class AIAppInteractor(private val context: Context) {
     
-    private val screenReader = ScreenReader(context)
+    private fun readScreen(): String = JarvisAccessibilityService.instance?.let { ScreenReader(it).extractAllText() } ?: ""
     private val workingMemory = TaskWorkingMemory()
     
     fun openAIApp(meta: AIAppMeta): Boolean {
-        return JarvisAccessibilityService.instance?.openAppByPackage(meta.packageName) ?: false
+        val service = JarvisAccessibilityService.instance ?: return false
+        service.openAppByPackage(meta.packageName)
+        return true
     }
     
-    fun clearContext() {
+    suspend fun clearContext() {
         try {
             JarvisAccessibilityService.instance?.pressBack()
             delay(300)
@@ -33,7 +35,7 @@ class AIAppInteractor(private val context: Context) {
         while (System.currentTimeMillis() - startTime < timeoutMs) {
             delay(1000)
             
-            val currentText = screenReader.extractAllText()
+            val currentText = readScreen()
             
             if (currentText == lastText) {
                 sameCount++
@@ -52,7 +54,7 @@ class AIAppInteractor(private val context: Context) {
     fun extractResponse(meta: AIAppMeta): String {
         when (meta.responseExtraction) {
             ResponseExtraction.SCREEN_TEXT -> {
-                return screenReader.extractAllText()
+                return readScreen()
             }
             ResponseExtraction.OCR_REQUIRED -> {
                 return screenReader.extractAllText()
@@ -69,11 +71,7 @@ class AIAppInteractor(private val context: Context) {
     
     fun getWorkingMemory(): TaskWorkingMemory = workingMemory
     
-    private fun tryCopyFromUI(): String {
-        return screenReader.extractAllText()
-    }
+    private fun tryCopyFromUI(): String = readScreen()
     
-    private fun tryShareFromUI(): String {
-        return screenReader.extractAllText()
-    }
+    private fun tryShareFromUI(): String = readScreen()
 }
