@@ -91,8 +91,7 @@ class GraphifyRepository(context: Context) {
         return patternNodeDao.observeActivePatterns(cutoff, 0.3f).map { it.size }
     }
 
-    fun buildMemoryContext(command: String): String = kotlinx.coroutines.runBlocking {
-        withContext(Dispatchers.IO) {
+    suspend fun buildMemoryContext(command: String): String = withContext(Dispatchers.IO) {
             val tasks = if (command.isBlank()) {
                 taskNodeDao.getRecentTasks(10)
             } else {
@@ -126,8 +125,6 @@ class GraphifyRepository(context: Context) {
 
             sb.toString().take(1500)
         }
-    }
-
     fun getSuggestions(): Flow<List<String>> = flow {
         val suggestions = mutableListOf<String>()
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
