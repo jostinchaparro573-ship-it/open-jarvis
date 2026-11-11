@@ -18,7 +18,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.setContent
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.ViewTreeLifecycleOwner
@@ -57,9 +56,8 @@ class OverlayService : LifecycleService() {
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
         lifecycleScope.launch(Dispatchers.IO) {
-            recentTasks = graphifyRepo.getRecentTasks(10)
             try {
-                graphifyRepo.getRecentTasks(10)
+                recentTasks = graphifyRepo.getRecentTasks(10)
             } catch (_: Exception) {
                 // Dashboard memory remains available even if initial loading fails.
             }
