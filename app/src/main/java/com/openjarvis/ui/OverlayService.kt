@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
-import androidx.lifecycle.ViewTreeLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.openjarvis.R
 import com.openjarvis.agent.AgentCore
@@ -87,7 +86,7 @@ class OverlayService : LifecycleService() {
         if (overlayView?.isAttachedToWindow == true) return
 
         val view = ComposeView(this).apply {
-            ViewTreeLifecycleOwner.set(this, this@OverlayService)
+            setTag(androidx.lifecycle.runtime.R.id.view_tree_lifecycle_owner, this@OverlayService)
             setContent {
                 OpenJarvisTheme {
                     val agentState = agentCore.state.collectAsState().value
