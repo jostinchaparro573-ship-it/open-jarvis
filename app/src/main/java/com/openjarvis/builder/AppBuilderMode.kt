@@ -205,7 +205,7 @@ class AppBuilderMode(private val context: Context) {
             permissions = json.optJSONArray("permissions")?.let { arr ->
                 (0 until arr.length()).map { arr.getString(it) }
             } ?: emptyList(),
-            complexity = AppBuilderMode.Complexity.valueOf(json.optString("complexity", "SIMPLE"))
+            complexity = Complexity.valueOf(json.optString("complexity", "SIMPLE"))
         )
     }
     
@@ -228,7 +228,7 @@ data class AppSpec(
     val screens: List<ScreenSpec>,
     val entities: List<EntitySpec>,
     val permissions: List<String>,
-    val complexity: AppBuilderMode.Complexity
+    val complexity: Complexity
 )
 
 data class ScreenSpec(
