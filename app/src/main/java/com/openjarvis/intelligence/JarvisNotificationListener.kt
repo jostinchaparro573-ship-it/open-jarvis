@@ -15,6 +15,13 @@ class JarvisNotificationListener : NotificationListenerService() {
     private val scope = CoroutineScope(Dispatchers.IO)
     private var graphifyRepo: GraphifyRepository? = null
     private val notifications = mutableListOf<JarvisNotification>()
+    @Volatile private var schoolGroupCaptureAuthorized = false
+
+    /** Must only be enabled by an explicit user-controlled consent flow. */
+    fun setSchoolGroupCaptureAuthorized(authorized: Boolean) {
+        schoolGroupCaptureAuthorized = authorized
+        if (!authorized) notifications.clear()
+    }
     
     companion object {
         private val PRIVACY_PROTECTED_APPS = setOf(
@@ -54,6 +61,8 @@ class JarvisNotificationListener : NotificationListenerService() {
     }
     
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        if (!schoolGroupCaptureAuthorized) return
+        if (sbn.packageName != "com.whatsapp") return
         if (!shouldProcessNotification(sbn.packageName)) {
             return
         }
