@@ -82,7 +82,7 @@ class MCPManager(private val context: Context) {
                     id = obj.getString("id"),
                     name = obj.getString("name"),
                     url = obj.getString("url"),
-                    apiKey = obj.optString("apiKey", null),
+                    apiKey = obj.optString("apiKey").takeIf { it.isNotBlank() && it != "null" },
                     enabled = obj.optBoolean("enabled", true)
                 )
             }
