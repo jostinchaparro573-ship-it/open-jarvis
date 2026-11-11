@@ -68,7 +68,7 @@ class JarvisAccessibilityService : AccessibilityService() {
         val node = findNodeByText(rootNode, text)
         if (node != null) {
             val result = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            node.recycle()
+            if (node !== rootNode) node.recycle()
             rootNode.recycle()
             return result
         }
@@ -110,16 +110,21 @@ class JarvisAccessibilityService : AccessibilityService() {
             
             if (nodeText?.contains(normalizedText) == true || contentDesc?.contains(normalizedText) == true) {
                 if (node.isClickable && node.isVisibleToUser) {
+                    // Release queued siblings/descendants before returning the matched node.
+                    while (queue.isNotEmpty()) {
+                        queue.removeFirst().recycle()
+                    }
                     return node
                 }
             }
-            
+
             for (i in 0 until node.childCount) {
                 node.getChild(i)?.let { child ->
                     queue.add(child)
                 }
             }
-            node.recycle()
+            // The caller owns rootNode and recycles it exactly once.
+            if (node !== root) node.recycle()
         }
         
         return null
