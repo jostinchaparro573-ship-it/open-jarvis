@@ -60,7 +60,7 @@ GraphifyDB is version 3 and only registers migration 2 to 3. Schema export is di
 - AppBuilderMode does not perform an actual Gradle build or ZIP package.
 - PromptEngine and AIAppInteractor require call-site and integration review before being described as working features.
 - SettingsScreen does not yet load all saved provider/model settings.
-- Voice is push-to-talk transcript input with manual Send; no wake phrase or hands-free execution.
+- Voice is push-to-talk transcript input with manual Send; no wake phrase or hands-free execution. User-selected phrases are “OK Jarvis” and “Hey Jarvis”; implementation and device validation remain open.
 
 ### Medium — accessibility thread and device behavior
 ScreenReader and AccessibilityService interactions still require thread/lifecycle validation and physical-device tests. No HONOR X6C test has been run.
@@ -78,6 +78,7 @@ The upstream repository is MIT-licensed, but every bundled third-party dependenc
 6. Audit all remaining screen interaction paths and placeholder modules.
 7. Test on HONOR X6C Android 15/MagicOS 9.
 8. Complete third-party license/provenance review.
+9. Implement and validate opt-in offline “OK Jarvis” / “Hey Jarvis” detection under `docs/VOICE_ACTIVATION.md`.
 
 ## Release rule
 
