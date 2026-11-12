@@ -58,7 +58,7 @@ class UniversalAdapter(private val context: Context) {
     }
 
     fun isCloudProvider(name: String = getProviderName()): Boolean =
-        name !in LOCAL_PROVIDERS
+        CloudDataPolicy.requiresConsent(name)
 
     suspend fun complete(
         systemPrompt: String,
@@ -97,7 +97,6 @@ class UniversalAdapter(private val context: Context) {
     
     companion object {
         private const val KEY_CLOUD_DATA_CONSENT = "cloud_data_sharing_enabled"
-        private val LOCAL_PROVIDERS = setOf("Ollama (Local)", "Local (LlamaCpp)")
 
         private var modelManager: ModelManager? = null
         
