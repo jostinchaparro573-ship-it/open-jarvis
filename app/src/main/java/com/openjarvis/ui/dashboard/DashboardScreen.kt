@@ -258,7 +258,7 @@ private fun StatusBadge() {
             Box(
                 modifier = Modifier
                     .size(6.dp)
-                    .scale(if (isActive) dotScale else 1f)
+                    .scale(dotScale)
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     drawCircle(color = dotColor)
