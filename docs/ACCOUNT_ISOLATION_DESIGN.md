@@ -90,3 +90,34 @@ Define retention limits for task transcripts and contact history. Deletion must 
 ## Current audit evidence
 
 The current Graphify v3 schema has AppNode, TaskNode, ContactNode, PatternNode, ProviderNode, EdgeEntity and AppIntelligenceEntity. Their inspected fields have no profile key. The inspected DAO queries select across the entire table. This is a confirmed structural gap, not a claim that account switching is already present.
+
+
+## 9. Additional stores and process entry points found in the call-site audit
+
+Graphify is not the only persistence boundary. The audit also found:
+
+- A separate Room database, `automations.db`, with an `AutomationEntity` and DAO whose queries currently have no profile key.
+- `AutomationWorker` loads an automation by ID and has no profile identity in its input. It currently fails closed instead of executing commands, but future workers must carry and validate the originating profile.
+- Provider API keys and provider selection are held in EncryptedSharedPreferences named `jarvis_encrypted_prefs`; voice preferences are held in `voice_prefs`. Encryption is present, but these preference namespaces are application-wide, not profile-specific.
+- GraphifyRepository is independently constructed in AgentCore, PromptEngine, AnalysisEngine, MainActivity, and OverlayService. A future profile session must be injected consistently into all of them; creating a repository with only Context must no longer silently select global memory.
+- In-memory TaskWorkingMemory, PromptEngine conversation context, provider instances, and Flow collectors must be cleared/cancelled on profile switch, not only database queries.
+
+Extend the profile boundary to automation rows and preference/secret storage. For scheduled work, include an opaque profile ID in WorkManager input and unique-work names, verify that the profile still exists and is active/authorized before any execution, and cancel that profile's work on logout/deletion. Do not infer the profile from the currently active UI at worker execution time.
+
+## 10. Provider and external-data boundaries
+
+Provider credentials must be keyed by profile and protected with a profile-specific encryption key or envelope key protected by Android Keystore. Switching profiles must never reuse the previous profile's key or selected provider silently.
+
+Cloud provider calls can send the system prompt and user command; Graphify context may also be included. The app must show which provider receives the request and provide a clear cloud/local distinction before enabling cloud-backed memory context. Account sign-in is not consent to send data to a provider.
+
+The current provider implementations must also be audited for secret exposure in URLs, logs, crash reports, and exception messages. Prefer authorization headers supported by each API over query-string API keys where the API supports them.
+
+## 11. Expanded acceptance tests
+
+- Two profiles can create automations with the same human-readable name and separate IDs/state.
+- A worker created by profile A cannot load or execute profile B's automation, even after active-profile switch.
+- Profile A's provider key and model selection are not visible to profile B.
+- Voice preferences are independently scoped if they represent personal settings; device-global accessibility/microphone permission state is not falsely represented as a profile setting.
+- Repository instances in AgentCore, PromptEngine, AnalysisEngine, MainActivity, and OverlayService all receive the same explicit profile session.
+- Switching profiles cancels old ProfileSession child jobs and drops old in-memory prompt/working memory before new context is loaded.
+- Profile deletion removes its automation rows, pending unique work, secrets, and profile-scoped preferences.

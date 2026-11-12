@@ -67,8 +67,8 @@ When all 12 items are verified, tell the user explicitly that the first structur
 
 ## Important incomplete areas
 
-- Graphify uses one shared graphify.db without account/profile identifiers. Google sign-in and account switching are not implemented.
-- The Graphify database is not encrypted at the application layer. Provider credentials and voice preferences are separately encrypted.
+- Graphify uses one shared graphify.db without account/profile identifiers. A second automations.db is also unscoped. Provider credentials and voice preferences are encrypted but stored in app-global preference namespaces. Google sign-in and account switching are not implemented.
+- The Graphify and automation databases are not encrypted at the application layer. Provider credentials and voice preferences use EncryptedSharedPreferences, but are not separated by profile.
 - The notification listener is not registered in the manifest. No historical WhatsApp messages are accessible.
 - Voice is Android SpeechRecognizer push-to-talk. The user reviews the transcript and taps Send. No automatic voice-to-AgentCore execution or always-on wake phrase exists.
 - The requested wake phrases are “OK Jarvis” and “Hey Jarvis”. Neither is implemented yet; see `docs/VOICE_ACTIVATION.md` for privacy, Android lifecycle, battery, and acceptance requirements.
@@ -77,7 +77,7 @@ When all 12 items are verified, tell the user explicitly that the first structur
 - ScreenWatcher is not an active integrated feature; tap and speech actions are blocked pending lifecycle/confirmation integration.
 - ProviderFallbackChain currently obtains the same active provider for each fallback name; it is not a real multi-provider fallback implementation.
 - AppBuilderMode does not perform a real Gradle build or ZIP packaging.
-- Automation work is deliberately not executed.
+- Automation work is deliberately not executed. AutomationDB and WorkManager input are not profile-scoped; execution must remain disabled until profile ownership is enforced.
 - Provider settings do not yet load all previously saved provider/model values back into the settings UI.
 - Android instrumentation tests are present but not run by the current CI workflow.
 - No APK has been built for distribution or installed on the user's phone.
@@ -94,3 +94,8 @@ Do not merge to main, generate or distribute a release APK, install it on the us
 ## Account isolation design review (2026-11-12)
 
 A static audit confirmed that Graphify's current tables and DAO queries have no account/profile scope. This remains a blocker; no schema change has been made yet. See `docs/ACCOUNT_ISOLATION_DESIGN.md` for the proposed migration-safe design and test gates. Existing rows must not be silently assigned to a newly authenticated Google account.
+
+
+## Expanded profile boundary audit (2026-11-12)
+
+The account-isolation design now includes both Room databases, encrypted preference namespaces, independent GraphifyRepository construction sites, in-memory conversation/task context, provider instances, and WorkManager jobs. See sections 9–11 of `docs/ACCOUNT_ISOLATION_DESIGN.md`. No multi-profile code has been enabled yet.

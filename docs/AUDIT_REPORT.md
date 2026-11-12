@@ -88,3 +88,14 @@ No release APK, distribution, Play Store publication, or merge to main until the
 ### Account isolation — expanded static audit (2026-11-12)
 
 The audit inspected AppNode, TaskNode, ContactNode, PatternNode, ProviderNode, EdgeEntity, AppIntelligenceEntity and their DAOs. All personal Graphify records are globally queried within one database; edge queries are also unscoped. App intelligence has a packageName-only primary key and needs an explicit decision on whether it is device-global catalog data or per-profile learned data. No Google account identity/session implementation was found in the inspected repository tree. Do not patch only the entities: query scoping, composite uniqueness/indexes, relationship integrity, migration, deletion and account-switch behavior must be implemented together. See `docs/ACCOUNT_ISOLATION_DESIGN.md`.
+
+
+### Critical — additional stores are not profile-scoped
+
+A second Room database, `automations.db`, stores AutomationEntity rows with no profile ID. AutomationWorker currently fails closed rather than executing commands, but its lookup is globally by automation ID and its WorkManager input carries no profile identity. This must be scoped before automation execution is enabled.
+
+SettingsActivity stores provider selection/API credentials in EncryptedSharedPreferences (`jarvis_encrypted_prefs`) and voice preferences in `voice_prefs`. These are encrypted but app-global; encryption does not provide account separation. They must be partitioned by profile and keys protected with Android Keystore.
+
+GraphifyRepository is constructed independently in AgentCore, PromptEngine, AnalysisEngine, MainActivity, and OverlayService. A single explicit ProfileSession must be passed through these entry points. PromptEngine conversation context, TaskWorkingMemory, provider instances, Flow collectors, and scheduled work must also be invalidated on profile switch.
+
+The Gemini provider currently places its API key in the request URL query parameter. Audit API-supported header authentication and remove query-string secrets where supported; do not log full URLs or exception payloads containing secrets.
