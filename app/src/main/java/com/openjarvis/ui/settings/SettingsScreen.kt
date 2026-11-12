@@ -282,7 +282,7 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = icon,
+                                imageVector = Icons.Default.Mic,
                                 contentDescription = null,
                                 tint = VoidColor.TextDisabled,
                                 modifier = Modifier.size(20.dp)
@@ -672,7 +672,7 @@ private fun SettingsToggleRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.Mic,
+                imageVector = icon,
                 contentDescription = null,
                 tint = VoidColor.TextSecondary,
                 modifier = Modifier.size(24.dp)
