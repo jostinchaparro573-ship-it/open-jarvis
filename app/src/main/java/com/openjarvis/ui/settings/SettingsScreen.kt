@@ -39,6 +39,10 @@ import com.openjarvis.ui.theme.VoidColor
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onSaveProvider: (String, String, String, String) -> Unit,
+    initialVoiceEnabled: Boolean = false,
+    initialSpeakResults: Boolean = true,
+    onVoiceEnabledChange: (Boolean) -> Unit = {},
+    onSpeakResultsChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedProvider by remember { mutableStateOf("Groq") }
@@ -50,10 +54,8 @@ fun SettingsScreen(
     var showPassword by remember { mutableStateOf(false) }
     var lastSaved by remember { mutableStateOf(0L) }
     var savedVisible by remember { mutableStateOf(false) }
-    var voiceEnabled by remember { mutableStateOf(false) }
-    var speakResults by remember { mutableStateOf(true) }
-    var speechRate by remember { mutableStateOf(1.05f) }
-    var sttMode by remember { mutableStateOf("Push to Talk") }
+    var voiceEnabled by remember { mutableStateOf(initialVoiceEnabled) }
+    var speakResults by remember { mutableStateOf(initialSpeakResults) }
     
     LaunchedEffect(selectedProvider) {
         showBaseUrlField = selectedProvider == "Custom"
@@ -153,7 +155,10 @@ fun SettingsScreen(
                     title = "Voice Assistant",
                     subtitle = "Push to Talk · manual activation",
                     enabled = voiceEnabled,
-                    onToggle = { voiceEnabled = !voiceEnabled }
+                    onToggle = {
+                        voiceEnabled = !voiceEnabled
+                        onVoiceEnabledChange(voiceEnabled)
+                    }
                 )
                 
                 if (voiceEnabled) {
@@ -163,61 +168,11 @@ fun SettingsScreen(
                         title = "Speak Results",
                         subtitle = "Jarvis reads results aloud",
                         enabled = speakResults,
-                        onToggle = { speakResults = !speakResults }
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    // STT Mode selector
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        color = VoidColor.Void900,
-                        border = BorderStroke(1.dp, VoidColor.BorderSubtle)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { 
-                                    sttMode = if (sttMode == "Push to Talk") "Auto (VAD)" else "Push to Talk"
-                                }
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "STT Mode",
-                                    style = TextStyle(
-                                        fontFamily = FontFamily.Default,
-                                        fontWeight = FontWeight(500),
-                                        fontSize = 14.sp,
-                                        color = VoidColor.TextPrimary
-                                    )
-                                )
-                                Text(
-                                    text = if (sttMode == "Push to Talk") 
-                                        "Hold mic to record, release to send" 
-                                    else 
-                                        "Tap to record, auto-sends on silence",
-                                    style = TextStyle(
-                                        fontFamily = FontFamily.Default,
-                                        fontWeight = FontWeight(400),
-                                        fontSize = 11.sp,
-                                        color = VoidColor.TextDisabled
-                                    )
-                                )
-                            }
-                            Text(
-                                text = sttMode,
-                                style = TextStyle(
-                                    fontFamily = FontFamily.Default,
-                                    fontWeight = FontWeight(500),
-                                    fontSize = 12.sp,
-                                    color = VoidColor.Violet
-                                )
-                            )
+                        onToggle = {
+                            speakResults = !speakResults
+                            onSpeakResultsChange(speakResults)
                         }
-                    }
+                    )
                     
                     Spacer(modifier = Modifier.height(8.dp))
                     
