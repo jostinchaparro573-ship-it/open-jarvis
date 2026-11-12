@@ -28,13 +28,16 @@ internal object ContactNameMatcher {
                 }
 
                 val candidateTokens = candidateName.split(' ').filter(String::isNotBlank)
-                val distance = if (queryTokens.all { it in candidateTokens }) {
+                val isWholeTokenMatch = queryTokens.all { it in candidateTokens }
+                val distance = if (isWholeTokenMatch) {
                     0
                 } else {
                     levenshteinDistance(normalizedQuery, candidateName)
                 }
 
-                if (distance > maxDistance || abs(normalizedQuery.length - candidateName.length) > maxDistance) {
+                val lengthDifferenceTooLarge =
+                    !isWholeTokenMatch && abs(normalizedQuery.length - candidateName.length) > maxDistance
+                if (distance > maxDistance || lengthDifferenceTooLarge) {
                     null
                 } else {
                     Candidate(contact, distance)
