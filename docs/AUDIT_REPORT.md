@@ -99,3 +99,12 @@ SettingsActivity stores provider selection/API credentials in EncryptedSharedPre
 GraphifyRepository is constructed independently in AgentCore, PromptEngine, AnalysisEngine, MainActivity, and OverlayService. A single explicit ProfileSession must be passed through these entry points. PromptEngine conversation context, TaskWorkingMemory, provider instances, Flow collectors, and scheduled work must also be invalidated on profile switch.
 
 The Gemini provider previously placed its API key in the request URL query parameter, which can be exposed in BASIC request-line logs. The current branch now sends the key using the x-goog-api-key request header for both generation and connection testing, keeping it out of the URL. This still needs a provider integration test and review of any proxy/crash logging.
+
+
+### Medium — provider failover is not real failover
+
+`ProviderFallbackChain.getProvider(name, adapter)` ignores the requested provider name and always returns the one active provider from UniversalAdapter. The fallback loop can therefore send the same request repeatedly to the same provider, despite displaying different provider names. UniversalAdapter stores only one provider's key/model/base URL at a time. This can waste quota and duplicate external data transfers; do not treat the feature as operational until per-provider configuration and routing tests exist. Provider credentials/preferences also remain app-global, despite encryption.
+
+### Security fix in latest branch commit
+
+Gemini generation and connection-test requests now put the API key in the `x-goog-api-key` header rather than the URL query parameter. The reason is that the current BASIC HTTP logging interceptor records request lines, which can include query parameters. CI is pending for this change; provider integration testing is still outstanding.

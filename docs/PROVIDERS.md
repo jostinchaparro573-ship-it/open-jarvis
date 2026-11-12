@@ -292,3 +292,15 @@ Each provider should handle:
 | Rate limit | Implement exponential backoff |
 | Network error | Show offline message, use cache if available |
 | Model not found | Fallback to default model |
+
+## Current implementation limitations (verified 2026-11-12)
+
+- Only one active provider configuration is stored at a time in the shared EncryptedSharedPreferences namespace: provider name, base URL, API key, and model. This is not a per-provider credential vault and is not profile-isolated.
+- `ProviderFallbackChain` reads a list of provider names, but its current `getProvider(name, adapter)` implementation ignores `name` and returns `adapter.getActiveProvider()`. The chain can therefore call the same configured provider repeatedly; it does not provide genuine multi-provider failover.
+- Do not describe provider fallback as functional until each provider has its own separately saved configuration, selection by provider ID, independent credential retrieval, and tests that prove a failure in provider A actually routes to provider B.
+- Gemini requests in the current branch use the `x-goog-api-key` header rather than putting the key in the URL query string. This keeps the secret out of the HTTP request line logged by the current BASIC interceptor. Integration testing is still required.
+- Provider and voice preferences are encrypted at rest using EncryptedSharedPreferences, but the preference files are shared across local profiles because profile isolation has not been implemented.
+
+### Required provider configuration model
+
+Use a profile-scoped provider configuration record keyed by (profileId, providerId), with provider type, base URL, model, credential reference, enabled state, and priority. Store secrets separately in an encrypted vault; do not store plaintext keys in Room. Fallback must skip disabled/unconfigured providers, respect rate limits, avoid retrying the same provider, and surface the provider that ultimately answered. Before sending a user's prompt to a different cloud provider, show the data-transfer implications and respect the user's configured consent.
