@@ -51,25 +51,9 @@ class ActionExecutor(private val service: JarvisAccessibilityService) {
                 }
             }
             
-            Action.TAP -> {
-                val text = action.text
-                if (text != null) {
-                    val success = service.tapByText(text)
-                    ActionResult(action, success, if (!success) "Could not tap: $text" else null)
-                } else {
-                    ActionResult(action, false, "No text provided for tap")
-                }
-            }
+            Action.TAP -> ActionResult(action, false, "Screen taps are disabled until explicit per-action confirmation is implemented")
             
-            Action.TYPE -> {
-                val value = action.value
-                if (value != null) {
-                    val success = service.typeText(value)
-                    ActionResult(action, success, if (!success) "Could not type: $value" else null)
-                } else {
-                    ActionResult(action, false, "No value provided for type")
-                }
-            }
+            Action.TYPE -> ActionResult(action, false, "Screen text entry is disabled until explicit per-action confirmation is implemented")
             
             Action.PRESS_BACK -> {
                 val success = service.pressBack()

@@ -23,7 +23,8 @@ class AIAppInteractor(private val context: Context) {
     }
     
     fun typePrompt(prompt: String): Boolean {
-        return JarvisAccessibilityService.instance?.typeText(prompt) ?: false
+        // Direct typing bypasses AgentCore's confirmation gate; keep it disabled for now.
+        return false
     }
     
     suspend fun waitForResponse(timeoutMs: Long = 60_000): String {

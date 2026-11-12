@@ -39,7 +39,7 @@ class ScreenWatcher(private val context: Context, private val agentCore: com.ope
         watcherJob = scope.launch {
             _state.value = WatcherState.Active
             
-            while (isActive && isActive) {
+            while (isActive) {
                 if (!isScreenOn()) {
                     delay(2000)
                     continue
@@ -86,7 +86,7 @@ class ScreenWatcher(private val context: Context, private val agentCore: com.ope
                 }
                 
                 if (triggered) {
-                    executeAction(rule.action, screenText)
+                    executeAction(rule.action)
                     val index = rules.indexOfFirst { it.id == rule.id }
                     if (index >= 0) rules[index] = rule.copy(lastTriggered = now)
                 }
@@ -96,16 +96,18 @@ class ScreenWatcher(private val context: Context, private val agentCore: com.ope
         }
     }
     
-    private suspend fun executeAction(action: WatchAction, screenText: String) {
+    private suspend fun executeAction(action: WatchAction) {
         when (val watchAction = action) {
             is WatchAction.TapElement -> {
-                JarvisAccessibilityService.instance?.tapByText(watchAction.text)
+                graphifyRepo.logTask("watch: tap blocked", "blocked until explicit per-action confirmation is implemented", "watch", 0)
+                return
             }
             is WatchAction.RunCommand -> {
                 agentCore.executeTask(watchAction.command)
             }
             is WatchAction.SpeakText -> {
-                com.openjarvis.voice.VoiceManager(context).speak(watchAction.template)
+                graphifyRepo.logTask("watch: speech blocked", "blocked until ScreenWatcher receives a lifecycle-managed VoiceManager", "watch", 0)
+                return
             }
             is WatchAction.ShowNotification -> {
                 showNotification(watchAction.title, watchAction.body)
@@ -124,13 +126,14 @@ class ScreenWatcher(private val context: Context, private val agentCore: com.ope
     }
     
     private fun getCurrentPackage(): String {
+        val service = JarvisAccessibilityService.instance ?: return "unknown"
+        val root = service.rootInActiveWindow ?: return "unknown"
         return try {
-            val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-            val runningTasks = context.getSystemService(Context.ACTIVITY_SERVICE)
-                .javaClass.getMethod("getRunningTasks", Int::class.javaPrimitiveType)
+            root.packageName?.toString() ?: "unknown"
+        } catch (_: Exception) {
             "unknown"
-        } catch (e: Exception) {
-            "unknown"
+        } finally {
+            root.recycle()
         }
     }
     
@@ -144,7 +147,7 @@ class ScreenWatcher(private val context: Context, private val agentCore: com.ope
     
     private fun isScreenOn(): Boolean {
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-        return powerManager.isScreenOn
+        return powerManager.isInteractive
     }
     
     private fun showNotification(title: String, body: String) {
@@ -165,7 +168,7 @@ class ScreenWatcher(private val context: Context, private val agentCore: com.ope
         rules.add(WatchRule(
             id = "skip-youtube-ads",
             name = "Auto-skip YouTube ads",
-            enabled = true,
+            enabled = false,
             trigger = WatchTrigger.TextAppears("Skip Ad", "com.google.android.youtube"),
             action = WatchAction.TapElement("Skip Ad"),
             cooldownMs = 10_000
