@@ -199,7 +199,7 @@ class GroqProvider(
 ```kotlin
 class GeminiProvider(
     private val apiKey: String,
-    private val model: String = "gemini-1.5-flash"
+    private val model: String = "gemini-3.8-flash"
 ) : LLMProvider {
     
     override val name: String = "Google Gemini"
@@ -224,7 +224,8 @@ class GeminiProvider(
         """.trimIndent()
         
         val request = Request.Builder()
-            .url("$baseUrl/models/$model:generateContent?key=$apiKey")
+            .url("$baseUrl/models/$model:generateContent")
+            .addHeader("x-goog-api-key", apiKey)
             .addHeader("Content-Type", "application/json")
             .post(RequestBody.create(requestBody, MediaType.get("application/json")))
             .build()
@@ -240,6 +241,14 @@ class GeminiProvider(
     }
 }
 ```
+
+
+### Gemini API key requirements (checked 2026-11-12)
+
+- Prefer a Gemini authorization (auth) key created in Google AI Studio. New AI Studio keys are auth keys by default.
+- Unrestricted standard keys are rejected. If an existing standard key must be used temporarily, explicitly restrict it to the Gemini API; Google documents the September 2026 migration away from standard keys.
+- Treat every key as a secret. Never commit it, print it to logs, or hard-code it into a distributed mobile APK. EncryptedSharedPreferences protects the locally saved value at rest, but a key embedded in a client app can still be extracted from a compromised device or app package. A production multi-user deployment should proxy provider calls through a backend that protects service credentials.
+- Google reference: [Using Gemini API keys](https://ai.google.dev/gemini-api/docs/api-key).
 
 ## Hydra.js Compatibility
 
