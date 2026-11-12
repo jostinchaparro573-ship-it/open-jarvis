@@ -50,11 +50,20 @@ class UniversalAdapter(private val context: Context) {
      * by the caller (which may include screen text and personal memory). A local
      * provider does not require this opt-in.
      */
-    fun hasCloudDataConsent(): Boolean =
-        prefs.getBoolean(KEY_CLOUD_DATA_CONSENT, false)
+    fun hasCloudDataConsent(): Boolean {
+        val providerId = getProviderName()
+        return CloudDataPolicy.hasConsentForProvider(
+            providerId = providerId,
+            enabled = prefs.getBoolean(KEY_CLOUD_DATA_CONSENT, false),
+            consentProviderId = prefs.getString(KEY_CLOUD_DATA_CONSENT_PROVIDER, null)
+        )
+    }
 
     fun setCloudDataConsent(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_CLOUD_DATA_CONSENT, enabled).apply()
+        val editor = prefs.edit().putBoolean(KEY_CLOUD_DATA_CONSENT, enabled)
+        if (enabled) editor.putString(KEY_CLOUD_DATA_CONSENT_PROVIDER, getProviderName())
+        else editor.remove(KEY_CLOUD_DATA_CONSENT_PROVIDER)
+        editor.apply()
     }
 
     fun isCloudProvider(name: String = getProviderName()): Boolean =
@@ -97,6 +106,7 @@ class UniversalAdapter(private val context: Context) {
     
     companion object {
         private const val KEY_CLOUD_DATA_CONSENT = "cloud_data_sharing_enabled"
+        private const val KEY_CLOUD_DATA_CONSENT_PROVIDER = "cloud_data_sharing_provider"
 
         private var modelManager: ModelManager? = null
         

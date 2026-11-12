@@ -12,6 +12,14 @@ class CloudDataPolicyTest {
     }
 
     @Test
+    fun consentIsBoundToTheSelectedProvider() {
+        assertTrue(CloudDataPolicy.hasConsentForProvider("Groq", true, "Groq"))
+        assertFalse(CloudDataPolicy.hasConsentForProvider("OpenAI", true, "Groq"))
+        assertFalse(CloudDataPolicy.hasConsentForProvider("Groq", false, "Groq"))
+        assertFalse(CloudDataPolicy.hasConsentForProvider("Groq", true, null))
+    }
+
+    @Test
     fun cloudAndCustomProvidersRequireExplicitConsent() {
         listOf(
             "Groq",

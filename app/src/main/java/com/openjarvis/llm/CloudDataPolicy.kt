@@ -12,4 +12,10 @@ object CloudDataPolicy {
 
     fun requiresConsent(providerId: String): Boolean =
         providerId !in localProviderIds
+
+    fun hasConsentForProvider(
+        providerId: String,
+        enabled: Boolean,
+        consentProviderId: String?
+    ): Boolean = enabled && consentProviderId == providerId
 }

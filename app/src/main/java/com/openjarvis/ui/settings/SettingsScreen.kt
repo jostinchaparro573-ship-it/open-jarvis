@@ -52,7 +52,7 @@ fun SettingsScreen(
     initialApiKey: String = "",
     initialModel: String = "llama-3.1-70b-versatile",
     initialCloudDataConsent: Boolean = false,
-    onCloudDataConsentChange: (Boolean) -> Unit = {},
+    onCloudDataConsentChange: (String, Boolean) -> Unit = { _, _ -> },
     initialVoiceEnabled: Boolean = false,
     initialSpeakResults: Boolean = true,
     onVoiceEnabledChange: (Boolean) -> Unit = {},
@@ -140,7 +140,7 @@ fun SettingsScreen(
                         selectedProvider = provider
                         // Consent is provider-specific: changing provider revokes it.
                         cloudDataConsent = false
-                        onCloudDataConsentChange(false)
+                        onCloudDataConsentChange(provider, false)
                         showProvidersDropdown = false
                     }
                 )
@@ -212,7 +212,7 @@ fun SettingsScreen(
                     icon = Icons.Default.Cloud,
                     onToggle = {
                         cloudDataConsent = !cloudDataConsent
-                        onCloudDataConsentChange(cloudDataConsent)
+                        onCloudDataConsentChange(selectedProvider, cloudDataConsent)
                     }
                 )
 

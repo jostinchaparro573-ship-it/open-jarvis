@@ -61,9 +61,14 @@ class SettingsActivity : ComponentActivity() {
                     onSaveProvider = { name, baseUrl, apiKey, model ->
                         saveProviderSettings(name, baseUrl, apiKey, model)
                     },
-                    initialCloudDataConsent = prefs.getBoolean("cloud_data_sharing_enabled", false),
-                    onCloudDataConsentChange = { enabled ->
-                        prefs.edit().putBoolean("cloud_data_sharing_enabled", enabled).apply()
+                    initialCloudDataConsent = prefs.getBoolean("cloud_data_sharing_enabled", false) &&
+                        prefs.getString("cloud_data_sharing_provider", null) ==
+                        (prefs.getString("provider_name", "Groq") ?: "Groq"),
+                    onCloudDataConsentChange = { providerId, enabled ->
+                        val editor = prefs.edit().putBoolean("cloud_data_sharing_enabled", enabled)
+                        if (enabled) editor.putString("cloud_data_sharing_provider", providerId)
+                        else editor.remove("cloud_data_sharing_provider")
+                        editor.apply()
                     },
                     initialVoiceEnabled = voicePrefs.getBoolean("voice_enabled", false),
                     initialSpeakResults = voicePrefs.getBoolean("speak_results", true),
