@@ -56,7 +56,7 @@ GraphifyDB is version 3 and only registers migration 2 to 3. Schema export is di
 - Notification listener is not registered in the manifest.
 - Automation scheduling does not execute user commands; the worker fails closed.
 - ScreenWatcher is not integrated as a production feature; its direct tap/speech paths are blocked, and further lifecycle work is needed.
-- ProviderFallbackChain currently returns the active provider regardless of the requested fallback name.
+- ProviderFallbackChain now executes the one configured provider at most once and explicitly reports that no alternate provider is configured. Genuine multi-provider failover remains unimplemented.
 - AppBuilderMode does not perform an actual Gradle build or ZIP package.
 - PromptEngine and AIAppInteractor require call-site and integration review before being described as working features.
 - SettingsScreen now receives and restores the saved provider, base URL, API key, and model. This was implemented in the latest branch commit and is awaiting the current CI run.
@@ -120,3 +120,8 @@ The code previously defaulted to `gemini-1.5-flash`, which Google shut down on 2
 The workflow was extended to run connected Android instrumentation tests on an API 34 emulator. On commit `346b49cfcc8b8bf7918c1e906094e53fc4b0b68e`, Kotlin compilation, JVM unit tests, and Android lint have passed; the emulator test step was still in progress at the time of this snapshot. No physical HONOR X6C validation has occurred.
 
 The provider guide's Gemini sample was corrected to use the current `gemini-3.8-flash` default and the `x-goog-api-key` header, rather than the retired `gemini-1.5-flash` model and a key in the URL. The guide now recommends Gemini authorization keys, or explicitly restricted standard keys where still supported, and warns against embedding secrets in a distributed mobile APK. See Google's [Gemini API key guidance](https://ai.google.dev/gemini-api/docs/api-key).
+
+
+### Provider retry safety correction (2026-11-12)
+
+`ProviderFallbackChain` now obtains the actual configured provider once and calls it at most once. It no longer loops through fallback labels while repeatedly returning the same active provider. On failure it surfaces a truthful message that no alternate provider is configured. Coroutine cancellation is rethrown instead of being converted into an ordinary provider failure. This is intentionally a safe limitation, not genuine multi-provider failover; independent credentials, routing, and tests are still required.
