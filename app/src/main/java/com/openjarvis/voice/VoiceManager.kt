@@ -127,7 +127,8 @@ class VoiceManager(private val context: Context) {
         return text
     }
 
-    // Auto VAD mode
+    // Uses Android SpeechRecognizer's end-of-speech detection.
+    // This is not a separate local AudioRecord-based VAD pipeline.
     fun startListeningWithVAD() {
         if (!isVoiceEnabled()) {
             _state.value = VoiceState.Error("Voice disabled in settings")
@@ -136,9 +137,8 @@ class VoiceManager(private val context: Context) {
 
         scope.launch {
             _state.value = VoiceState.Recording
-            _state.value = VoiceState.Transcribing
 
-            // For now, use simple push-to-talk with Android's built-in VAD
+            // Android SpeechRecognizer reports the final transcript asynchronously.
             sttEngine.startListening(
                 onResult = { text ->
                     if (!text.isNullOrBlank()) {
