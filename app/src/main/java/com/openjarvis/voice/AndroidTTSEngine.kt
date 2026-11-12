@@ -16,8 +16,28 @@ class AndroidTTSEngine(private val context: Context) {
     init {
         tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                isReady = true
-                tts?.language = Locale.US
+                val preferredLocale = Locale.getDefault()
+                val preferredStatus = tts?.setLanguage(preferredLocale)
+                    ?: TextToSpeech.LANG_NOT_SUPPORTED
+
+                // Prefer the phone's language. If a regional Spanish voice is missing,
+                // fall back to standard Spanish before using English.
+                val languageStatus = if (
+                    preferredStatus == TextToSpeech.LANG_MISSING_DATA ||
+                    preferredStatus == TextToSpeech.LANG_NOT_SUPPORTED
+                ) {
+                    val fallbackLocale = if (preferredLocale.language == "es") {
+                        Locale("es", "ES")
+                    } else {
+                        Locale.US
+                    }
+                    tts?.setLanguage(fallbackLocale) ?: TextToSpeech.LANG_NOT_SUPPORTED
+                } else {
+                    preferredStatus
+                }
+
+                isReady = languageStatus != TextToSpeech.LANG_MISSING_DATA &&
+                    languageStatus != TextToSpeech.LANG_NOT_SUPPORTED
                 tts?.setSpeechRate(speechRate)
                 tts?.setPitch(pitch)
                 
