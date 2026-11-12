@@ -98,4 +98,4 @@ SettingsActivity stores provider selection/API credentials in EncryptedSharedPre
 
 GraphifyRepository is constructed independently in AgentCore, PromptEngine, AnalysisEngine, MainActivity, and OverlayService. A single explicit ProfileSession must be passed through these entry points. PromptEngine conversation context, TaskWorkingMemory, provider instances, Flow collectors, and scheduled work must also be invalidated on profile switch.
 
-The Gemini provider currently places its API key in the request URL query parameter. Audit API-supported header authentication and remove query-string secrets where supported; do not log full URLs or exception payloads containing secrets.
+The Gemini provider previously placed its API key in the request URL query parameter, which can be exposed in BASIC request-line logs. The current branch now sends the key using the x-goog-api-key request header for both generation and connection testing, keeping it out of the URL. This still needs a provider integration test and review of any proxy/crash logging.

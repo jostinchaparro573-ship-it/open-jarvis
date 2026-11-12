@@ -44,7 +44,8 @@ class GeminiProvider(
             }.toString()
             
             val request = Request.Builder()
-                .url("$baseUrl/models/$model:generateContent?key=$apiKey")
+                .url("$baseUrl/models/$model:generateContent")
+                .addHeader("x-goog-api-key", apiKey)
                 .addHeader("Content-Type", "application/json")
                 .post(requestBody.toRequestBody("application/json".toMediaType()))
                 .build()
@@ -72,7 +73,8 @@ class GeminiProvider(
         runCatching {
             val startTime = System.currentTimeMillis()
             val request = Request.Builder()
-                .url("$baseUrl/models?key=$apiKey")
+                .url("$baseUrl/models")
+                .addHeader("x-goog-api-key", apiKey)
                 .get()
                 .build()
             
