@@ -5,6 +5,7 @@ import android.content.Intent
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -87,6 +88,8 @@ class AndroidSTTEngine(private val context: Context) : STTEngine {
                     if (pendingResult.isNullOrBlank()) {
                         currentErrorCallback?.invoke(errorMessage)
                     }
+                    currentCallback = null
+                    currentErrorCallback = null
                 }
 
                 override fun onResults(results: Bundle?) {
@@ -99,6 +102,8 @@ class AndroidSTTEngine(private val context: Context) : STTEngine {
                     } else {
                         currentErrorCallback?.invoke("No speech detected")
                     }
+                    currentCallback = null
+                    currentErrorCallback = null
                 }
 
                 override fun onPartialResults(partialResults: Bundle?) {}
@@ -114,15 +119,45 @@ class AndroidSTTEngine(private val context: Context) : STTEngine {
         pendingResult = null
         silenceStartTime = -1L
 
+        if (context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            currentCallback = null
+            currentErrorCallback = null
+            onError("Microphone permission is not granted")
+            return
+        }
+        if (!SpeechRecognizer.isRecognitionAvailable(context)) {
+            currentCallback = null
+            currentErrorCallback = null
+            onError("Speech recognition is unavailable on this device")
+            return
+        }
+        val activeRecognizer = recognizer
+        if (activeRecognizer == null) {
+            currentCallback = null
+            currentErrorCallback = null
+            onError("Speech recognition is still initializing. Try again.")
+            return
+        }
+
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, SILENCE_TIMEOUT_MS)
         }
 
-        recognizer?.startListening(intent)
+        try {
+            activeRecognizer.startListening(intent)
+        } catch (e: SecurityException) {
+            currentCallback = null
+            currentErrorCallback = null
+            onError("Microphone permission was denied")
+        } catch (e: IllegalStateException) {
+            currentCallback = null
+            currentErrorCallback = null
+            onError("Speech recognizer is busy. Try again.")
+        }
     }
 
     private fun stopListeningEarly() {
@@ -133,17 +168,16 @@ class AndroidSTTEngine(private val context: Context) : STTEngine {
     }
 
     override fun stop(): String? {
-        _isListening.value = false
+        // Android delivers the final transcript asynchronously through onResults.
+        // Keep callbacks registered so a press-to-talk release cannot discard it.
         recognizer?.stopListening()
-        
+
         audioRecord?.stop()
         audioRecord?.release()
         audioRecord = null
-        
+
         val result = pendingResult
         pendingResult = null
-        currentCallback = null
-        currentErrorCallback = null
         return result
     }
 
