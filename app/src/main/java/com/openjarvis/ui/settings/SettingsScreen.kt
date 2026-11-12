@@ -1,5 +1,9 @@
 package com.openjarvis.ui.settings
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -19,6 +23,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
@@ -32,6 +37,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.openjarvis.llm.UniversalAdapter
 import com.openjarvis.ui.theme.VoidColor
 
@@ -56,7 +62,30 @@ fun SettingsScreen(
     var savedVisible by remember { mutableStateOf(false) }
     var voiceEnabled by remember { mutableStateOf(initialVoiceEnabled) }
     var speakResults by remember { mutableStateOf(initialSpeakResults) }
-    
+    val context = LocalContext.current
+    var hasAudioPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val microphonePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasAudioPermission = granted
+        voiceEnabled = granted
+        onVoiceEnabledChange(granted)
+    }
+
+    LaunchedEffect(hasAudioPermission) {
+        if (!hasAudioPermission && voiceEnabled) {
+            voiceEnabled = false
+            onVoiceEnabledChange(false)
+        }
+    }
+
     LaunchedEffect(selectedProvider) {
         showBaseUrlField = selectedProvider == "Custom"
     }
@@ -153,11 +182,22 @@ fun SettingsScreen(
                 
                 SettingsToggleRow(
                     title = "Voice Assistant",
-                    subtitle = "Push to Talk · manual activation",
+                    subtitle = if (hasAudioPermission) {
+                        "Push to Talk · manual activation"
+                    } else {
+                        "Microphone permission required"
+                    },
                     enabled = voiceEnabled,
                     onToggle = {
-                        voiceEnabled = !voiceEnabled
-                        onVoiceEnabledChange(voiceEnabled)
+                        if (voiceEnabled) {
+                            voiceEnabled = false
+                            onVoiceEnabledChange(false)
+                        } else if (hasAudioPermission) {
+                            voiceEnabled = true
+                            onVoiceEnabledChange(true)
+                        } else {
+                            microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
                     }
                 )
                 
