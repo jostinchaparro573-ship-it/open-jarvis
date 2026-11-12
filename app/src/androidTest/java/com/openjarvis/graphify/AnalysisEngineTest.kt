@@ -1,6 +1,8 @@
 package com.openjarvis.graphify
 
 import org.junit.Test
+import org.junit.Before
+import org.junit.After
 import org.junit.runner.RunWith
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -10,6 +12,18 @@ import kotlinx.coroutines.Dispatchers
 
 @RunWith(AndroidJUnit4::class)
 class AnalysisEngineTest {
+
+    @Before
+    fun clearDatabaseBeforeTest() {
+        val context = testContext()
+        GraphifyDB.resetForTesting()
+        context.deleteDatabase("graphify.db")
+    }
+
+    @After
+    fun closeDatabaseAfterTest() {
+        GraphifyDB.resetForTesting()
+    }
 
     @Test
     fun `3 identical sequences should create PatternNode with confidence > 0`() = runTest(Dispatchers.IO) {

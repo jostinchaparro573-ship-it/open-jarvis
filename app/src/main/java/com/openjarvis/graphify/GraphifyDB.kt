@@ -71,7 +71,10 @@ abstract class GraphifyDB : RoomDatabase() {
         }
         
         fun resetForTesting() {
-            INSTANCE = null
+            synchronized(this) {
+                INSTANCE?.close()
+                INSTANCE = null
+            }
         }
     }
 }

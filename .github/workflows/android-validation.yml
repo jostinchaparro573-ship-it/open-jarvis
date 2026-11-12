@@ -42,3 +42,12 @@ jobs:
 
       - name: Run Android lint
         run: gradle :app:lintDebug
+
+      - name: Run Android instrumentation tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          script: gradle :app:connectedDebugAndroidTest
