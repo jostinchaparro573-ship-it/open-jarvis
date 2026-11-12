@@ -31,6 +31,7 @@ This is a working development branch. The main branch has not been changed. No A
 - Wired the dashboard's Start Jarvis overlay button to the real start callback.
 - Replaced always-green dashboard status and fixed zero-valued app/pattern metrics with truthful status and repository-derived counts.
 - Added microphone runtime permission handling before enabling push-to-talk.
+- Documented the user's selected wake phrases: “OK Jarvis” and “Hey Jarvis”; implementation remains planned, not available.
 
 ## CI evidence
 
@@ -70,6 +71,7 @@ When all 12 items are verified, tell the user explicitly that the first structur
 - The Graphify database is not encrypted at the application layer. Provider credentials and voice preferences are separately encrypted.
 - The notification listener is not registered in the manifest. No historical WhatsApp messages are accessible.
 - Voice is Android SpeechRecognizer push-to-talk. The user reviews the transcript and taps Send. No automatic voice-to-AgentCore execution or always-on wake phrase exists.
+- The requested wake phrases are “OK Jarvis” and “Hey Jarvis”. Neither is implemented yet; see `docs/VOICE_ACTIVATION.md` for privacy, Android lifecycle, battery, and acceptance requirements.
 - Spanish-first voice selection, offline STT, and actual VAD are not complete.
 - Screen TAP/TYPE confirmation UI is not implemented; these actions remain disabled.
 - ScreenWatcher is not an active integrated feature; tap and speech actions are blocked pending lifecycle/confirmation integration.
