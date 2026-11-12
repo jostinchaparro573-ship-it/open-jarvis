@@ -166,7 +166,11 @@ class GraphifyRepository(context: Context) {
     }
 
     suspend fun findContactByName(name: String): ContactNode? = withContext(Dispatchers.IO) {
-        contactNodeDao.findByNameOrPhone(name.lowercase(), "%${name}%")
+        val query = name.trim()
+        if (query.isBlank()) return@withContext null
+
+        contactNodeDao.findByNameOrPhone(query.lowercase(), "%$query%")
+            ?: ContactNameMatcher.findBestMatch(query, contactNodeDao.getAllContacts())
     }
 
     suspend fun incrementContact(id: Long) = withContext(Dispatchers.IO) {

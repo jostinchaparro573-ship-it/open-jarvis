@@ -14,6 +14,9 @@ interface ContactNodeDao {
     @Query("SELECT * FROM contact_nodes WHERE name LIKE :name OR phoneNumber LIKE :phone ORDER BY contactCount DESC LIMIT 1")
     suspend fun findByNameOrPhone(name: String, phone: String?): ContactNode?
     
+    @Query("SELECT * FROM contact_nodes ORDER BY lastContacted DESC LIMIT 1000")
+    suspend fun getAllContacts(): List<ContactNode>
+
     @Query("SELECT * FROM contact_nodes WHERE id = :id")
     suspend fun getById(id: Long): ContactNode?
     
