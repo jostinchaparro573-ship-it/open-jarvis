@@ -1,4 +1,39 @@
-# Milestones - Open Jarvis
+# Milestones — OpenJarvis
+
+> Verification note: M1 and M8 completion marks and benchmark claims below were inherited from upstream planning. They have not been independently verified in this fork and must not be treated as completed acceptance tests.
+
+## F0: Foundation and Structure Gate
+
+**Status:** In progress  
+**Purpose:** Stabilize the repository architecture, safety boundaries, persistence, permissions, and test foundation before expanding prototypes.
+
+### Checklist
+
+- [x] Keep development on the dedicated Jarvis branch; leave main untouched.
+- [x] Maintain green CI for Kotlin compilation, JVM unit tests, and Android lint.
+- [x] Validate LLM action plans and reject unsupported/malformed plans.
+- [x] Fix ScreenReader AccessibilityNodeInfo ownership and verify with CI.
+- [x] Serialize AgentCore tasks and cancel its scope with the service lifecycle.
+- [x] Block identified direct TAP/TYPE bypasses until explicit confirmation exists.
+- [ ] Finish permission, voice, and accessibility lifecycle review.
+- [ ] Design and implement independent local/Google account profiles.
+- [ ] Decide Graphify encryption, retention/deletion, and Room migration strategy.
+- [ ] Complete provider data-transfer disclosure and saved-provider settings behavior.
+- [ ] Audit incomplete automation, notification, ScreenWatcher, fallback, and AppBuilder modules.
+- [ ] Run Android instrumentation tests and validate on the HONOR X6C; finish dependency/resource license review.
+
+### Acceptance criteria
+
+F0 is complete only when all twelve checklist items are verified, latest CI is green, no unresolved critical/high structural or safety findings remain, and the user is told that the structural stage is complete before work moves to the next stage.
+
+The progress percentage is calculated only from these twelve equally weighted checklist items. It is not the percentage of the entire product. Do not mark F0 complete because a build alone succeeds.
+
+### User milestone reminder
+
+When F0 is fully complete, explicitly remind the user: “The first structural stage is complete; now we can begin the next stage.” This is a project milestone reminder in the conversation, not a scheduled background notification.
+
+---
+
 
 ## Overview
 
@@ -8,7 +43,7 @@ Open Jarvis development is organized into 8 milestones, each building on the pre
 
 ## M1: Accessibility Service + App Launcher
 
-**Status:** ✅ Complete
+**Status:** Unverified in this fork — inherited upstream status, not independently validated.
 
 ### Goal
 
@@ -16,22 +51,22 @@ Create the foundation: an AccessibilityService that can launch apps and respond 
 
 ### Deliverables
 
-- [x] AndroidManifest with accessibility permissions
-- [x] JarvisAccessibilityService (AccessibilityService implementation)
-- [x] Simple command parser (detects "open X" pattern)
-- [x] Floating overlay UI (pill + expanded text input)
-- [x] App launcher by package name
-- [x] Graphify DB with AppNode logging
-- [x] Settings screen (UI only, no LLM wired yet)
+- [ ] AndroidManifest with accessibility permissions
+- [ ] JarvisAccessibilityService (AccessibilityService implementation)
+- [ ] Simple command parser (detects "open X" pattern)
+- [ ] Floating overlay UI (pill + expanded text input)
+- [ ] App launcher by package name
+- [ ] Graphify DB with AppNode logging
+- [ ] Settings screen (UI only, no LLM wired yet)
 
 ### Acceptance Criteria
 
-- [x] User can grant accessibility permission via deep link
-- [x] User can grant overlay permission
-- [x] Floating button appears after permissions granted
-- [x] Typing "open WhatsApp" opens WhatsApp
-- [x] Task logged to Graphify with timestamp
-- [x] APK under 25MB
+- [ ] User can grant accessibility permission via deep link
+- [ ] User can grant overlay permission
+- [ ] Floating button appears after permissions granted
+- [ ] Typing "open WhatsApp" opens WhatsApp
+- [ ] Task logged to Graphify with timestamp
+- [ ] APK under 25MB
 
 ---
 
@@ -191,19 +226,19 @@ Final polish: APK size, memory, performance, documentation, release.
 
 ### Deliverables
 
-- [x] ProGuard minification (R8 full mode)
-- [x] Unused dependency removal
-- [x] Memory profiling (<60MB idle)
-- [x] Cold start benchmarking
-- [x] GitHub Releases setup
+- [ ] ProGuard minification (R8 full mode)
+- [ ] Unused dependency removal
+- [ ] Memory profiling (<60MB idle)
+- [ ] Cold start benchmarking
+- [ ] GitHub Releases setup
 - [ ] Google Play store listing
-- [x] Full documentation
+- [ ] Full documentation
 
 ### Acceptance Criteria
 
-- [x] APK <25MB (base, no models)
-- [x] Cold start <1.5 seconds
-- [x] Idle RAM <60MB
+- [ ] APK <25MB (base, no models)
+- [ ] Cold start <1.5 seconds
+- [ ] Idle RAM <60MB
 - [ ] No ANRs or crashes (monitoring)
 - [ ] Google Play publishes successfully
 - [ ] 100+ GitHub stars
@@ -211,6 +246,8 @@ Final polish: APK size, memory, performance, documentation, release.
 ---
 
 ## Timeline Estimate
+
+These are historical planning estimates, not commitments or evidence of current completion.
 
 | Milestone | Estimated Duration | Cumulative |
 |-----------|-------------------|-------------|

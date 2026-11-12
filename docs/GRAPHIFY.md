@@ -1,303 +1,97 @@
-# Graphify Memory System - Open Jarvis
+# Graphify — Current Implementation and Open Design Work
 
-## Overview
+## Current role
 
-Graphify is Open Jarvis's persistent memory system built on SQLite via Room DB. It's designed as a graph database that tracks user behavior and learns patterns over time.
+Graphify is the local Room/SQLite data layer used by OpenJarvis. It stores task history, app usage, contacts inferred from commands, learned sequence patterns, provider statistics, and relationships between records.
 
-## Architecture
+This document describes the code currently in the working branch. It is not a claim that account isolation, encryption, or production-grade graph learning is complete.
 
-```
-┌─────────────────────────────────────────────────────┐
-│                   GraphifyDB                        │
-│              (Room Database)                       │
-└─────────────────────────────────────────────────────┘
-         ▲            ▲            ▲            ▲
-         │            │            │            │
-    ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐
-    │ AppNode│  │TaskNode│  │Contact │  │Pattern │
-    │        │  │        │  │  Node  │  │  Node  │
-    └────────┘  └────────┘  └────────┘  └────────┘
-                                            ▲
-                                            │
-                                    ┌──────────┐
-                                    │  Edges   │
-                                    └──────────┘
-```
+## Database
 
-## Node Types
+- Database file: graphify.db
+- Room schema version: 3
+- Database class: GraphifyDB
+- Migration currently registered: 2 to 3, creating app_intelligence and its indexes
+- Schema export: disabled
+- Database encryption at the application layer: not implemented
+- Account/profile scoping: not implemented
 
-### AppNode
+## Current entities
 
-Represents an installed application on the device.
+| Entity | Current fields | Purpose |
+|---|---|---|
+| AppNode | id, packageName, label, lastUsed, useCount | App launch/use history |
+| TaskNode | id, command, result, timestamp, providerUsed, latencyMs | User task history |
+| ContactNode | id, name, phoneNumber, email, lastContacted, contactCount, contactMethod | Contacts inferred/stored by Jarvis |
+| PatternNode | id, sequenceHash, sequenceString, occurrenceCount, lastSeen, confidence, timeOfDayMask, dayOfWeekMask | Repeated task-sequence patterns |
+| ProviderNode | id, providerName, modelName, lastUsed, useCount, successCount, totalLatencyMs | Provider usage metrics |
+| EdgeEntity | id, fromId, fromType, toId, toType, edgeType, weight, lastUpdated | Relationships between graph records |
+| AppIntelligenceEntity | packageName, appName, category, capabilities, trustScore, lastAnalyzed, isAIApp, aiMeta | Device-level app metadata |
 
-```kotlin
-@Entity(tableName = "app_nodes")
-data class AppNode(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val packageName: String,      // "com.whatsapp"
-    val label: String,          // "WhatsApp"
-    val lastUsed: Long,        // timestamp
-    val useCount: Int = 1     // times opened
-)
-```
+AppIntelligenceEntity is device/app metadata. The other listed records can contain personal activity or inferred relationship information.
 
-**Index:** `packageName`, `lastUsed`
+## Repository behavior
 
-### TaskNode
+GraphifyRepository currently provides:
+- app launch logging and recent/most-used app queries
+- task logging, recent-task retrieval, search, and aggregate statistics
+- memory-context assembly from recent tasks, patterns, and contacts
+- contact insertion, lookup, and interaction counts
+- pattern insertion, lookup, confidence updates, and time-mask updates
+- provider usage statistics
+- edge insertion
+- a one-shot suggestions flow based on recent patterns and contacts
 
-Represents a user command or task execution.
+The memory context is capped at 1,500 characters. If a cloud LLM provider is selected, the assembled context may be included in data sent to that provider.
 
-```kotlin
-@Entity(tableName = "task_nodes")
-data class TaskNode(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val command: String,        // "Open WhatsApp"
-    val result: String,       // "Success" or error
-    val timestamp: Long,    // execution time
-    val providerUsed: String  // "Groq" / null for M1
-)
-```
+## Pattern analysis
 
-**Index:** `timestamp`, `command`
+AnalysisEngine currently:
+1. reads up to ten recent tasks
+2. detects repeated three-task sequences when the same sequence appears at least twice
+3. updates pattern confidence or inserts a new pattern
+4. associates time-of-day information with patterns
+5. attempts to infer contacts from command text
+6. decays confidence for stale patterns
 
-### ContactNode
+ContactNameMatcher provides conservative local fuzzy matching for small spelling differences and exact whole-token matches. It is a convenience matcher, not proof of a person's identity. Any future consequential action involving a contact must still require user confirmation.
 
-Represents a contact from the device's contacts database.
+## Important limitations
 
-```kotlin
-@Entity(tableName = "contact_nodes")
-data class ContactNode(
-    @PrimaryKey
-    val contactId: String,
-    val displayName: String,
-    val phoneNumber: String?,
-    val email: String?,
-    val lastMentioned: Long
-)
-```
+### Account isolation — release blocker
 
-### PatternNode
+All personal records currently share one graphify.db file. The entities and DAO queries do not include an account/profile identifier. There is no Google sign-in/session provider or account-switching lifecycle. Therefore the requirement that every Google account starts with an independent memory is not met.
 
-Represents learned patterns about user behavior.
+Do not add an accountId column as a quick patch. First define:
+- a stable profile identity based on the authenticated provider's stable subject, not the mutable email address
+- a local-only profile for use without sign-in
+- explicit behavior when linking a local profile to a Google account
+- separate data scopes for tasks, contacts, patterns, provider credentials, and automations
+- account switching that cancels active tasks and clears in-memory context
+- Room migration and tests proving no cross-profile reads or writes
+- explicit export/delete behavior for each profile
 
-```kotlin
-@Entity(tableName = "pattern_nodes")
-data class PatternNode(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val patternType: String,    // "APP_SEQUENCE"
-    val patternData: String, // JSON: ["WhatsApp", "Chrome"]
-    val confidence: Float,  // 0.0 - 1.0
-    val lastUpdated: Long
-)
-```
+A per-profile database file keyed by a non-reversible stable profile identifier is one possible design. Device-wide app catalog metadata can remain device-scoped if it contains no personal usage history.
 
-## Edge Types
+### Storage and privacy
 
-Edges connect nodes and represent relationships. They're stored as separate entities:
+The Room database is not encrypted with SQLCipher or another application-level database encryption layer. Android's app sandbox and device encryption are helpful protections, but they are not equivalent to per-database encryption. There is no complete memory deletion/retention UI.
 
-```kotlin
-@Entity(tableName = "edges")
-data class Edge(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val sourceNodeId: Long,
-    val targetNodeId: Long,
-    val edgeType: String,     // "UsedBy", "OpenedAfter", etc.
-    val weight: Float = 1.0f,
-    val lastUpdated: Long
-)
-```
+Provider API keys are stored separately using EncryptedSharedPreferences. That does not encrypt Graphify records.
 
-| Edge Type | Meaning | Example |
-|----------|--------|---------|
-| `UsedBy` | App Node used by Task | "WhatsApp" ← "Message John" |
-| `OpenedAfter` | App opened after app | "Chrome" ← "Search" |
-| `ResultedIn` | Task led to task | "Open WhatsApp" → "Send message" |
-| `MentionedIn` | Contact mentioned in task | "John" ← "Message John" |
-| `LearnedFrom` | Pattern derived from | (Pattern) ← [App history] |
+### Migrations and tests
 
-## Query Patterns
+Only migration 2 to 3 is registered. There are no verified migration tests for the current schema, and exportSchema is false. Android instrumentation tests exist but are not run by the current GitHub Actions workflow.
 
-### Get Recent Apps
+### Data transfer
 
-```kotlin
-@Query("SELECT * FROM app_nodes ORDER BY lastUsed DESC LIMIT :limit")
-suspend fun getRecentApps(limit: Int): List<AppNode>
-```
+When a cloud provider is active, task text, the system prompt, and any included screen text or memory context can be sent to that provider. The app must clearly disclose this and must not claim that all information stays on-device.
 
-### Get Most Used Apps
+## Next Graphify work
 
-```kotlin
-@Query("SELECT * FROM app_nodes ORDER BY useCount DESC LIMIT :limit")
-suspend fun getMostUsedApps(limit: Int): List<AppNode>
-```
-
-### Find Similar Tasks
-
-```kotlin
-@Query("SELECT * FROM task_nodes WHERE command LIKE '%' || :query || '%' ORDER BY timestamp DESC LIMIT :limit")
-suspend fun findSimilarTasks(query: String, limit: Int): List<TaskNode>
-```
-
-### Get App Sequence Pattern
-
-```kotlin
-@Query("""
-    SELECT a.* FROM app_nodes a
-    INNER JOIN edges e ON a.id = e.targetNodeId
-    WHERE e.sourceNodeId = :appId AND e.edgeType = 'OpenedAfter'
-    ORDER BY e.weight DESC
-""")
-suspend fun getAppsOpenedAfter(appId: Long): List<AppNode>
-```
-
-## Memory Context Injection
-
-When preparing a prompt for the LLM, inject relevant memory:
-
-```kotlin
-fun buildMemoryContext(recentApps: List<AppNode>, relevantTasks: List<TaskNode>): String {
-    return buildString {
-        appendLine("Recent Apps:")
-        recentApps.take(5).forEach { app ->
-            appendLine("- ${app.label} (used ${app.useCount}x)")
-        }
-        appendLine()
-        appendLine("Relevant Past Tasks:")
-        relevantTasks.take(3).forEach { task ->
-            appendLine("- ${task.command}: ${task.result}")
-        }
-    }
-}
-```
-
-**Example Memory Context:**
-```
-Recent Apps:
-- WhatsApp (used 15x)
-- Chrome (used 12x)
-- Camera (used 8x)
-
-Relevant Past Tasks:
-- Open WhatsApp: Success
-- Send message to John: Success
-```
-
-## Pattern Learning
-
-### On Task Completion
-
-```kotlin
-suspend fun onTaskComplete(command: String, success: Boolean) {
-    // Log task node
-    taskNodeDao.insert(TaskNode(
-        command = command,
-        result = if (success) "Success" else "Failed",
-        timestamp = System.currentTimeMillis()
-    ))
-    
-    // If successful, update pattern
-    if (success) {
-        learnPattern(command)
-    }
-}
-```
-
-### Simple Pattern: App Sequence
-
-Track when apps are opened in sequence:
-
-```kotlin
-suspend fun learnPattern(newApp: AppNode) {
-    val previousRecent = appNodeDao.getRecentApps(2)
-    if (previousRecent.size >= 2) {
-        val previousApp = previousRecent[1]
-        
-        // Check if edge exists
-        val existingEdge = edgeDao.findEdge(
-            previousApp.id, 
-            newApp.id, 
-            "OpenedAfter"
-        )
-        
-        if (existingEdge != null) {
-            // Increment weight
-            edgeDao.incrementWeight(existingEdge.id)
-        } else {
-            // Create new edge
-            edgeDao.insert(Edge(
-                sourceNodeId = previousApp.id,
-                targetNodeId = newApp.id,
-                edgeType = "OpenedAfter",
-                weight = 1.0f
-            ))
-        }
-    }
-}
-```
-
-## Performance
-
-- **Database size:** ~5MB for 1000 tasks, 50 apps
-- **Query time:** <50ms for recent apps, <100ms for patterns
-- **Write time:** <10ms per insertion
-
-### Indexing Strategy
-
-```kotlin
-@Entity(tableName = "app_nodes", indices = [
-    Index(value = ["packageName"], unique = true),
-    Index(value = ["lastUsed"]),
-    Index(value = ["useCount"])
-])
-```
-
-### Room Configuration
-
-```kotlin
-Room.databaseBuilder(
-    context,
-    GraphifyDB::class.java,
-    "graphify.db"
-)
-    .fallbackToDestructiveMigration()
-    .build()
-```
-
-## Security
-
-- All stored locally on device
-- No cloud sync in M1-M8
-- API keys stored in EncryptedSharedPreferences
-- App nodes do not contain sensitive data
-- Contact nodes opt-in only (M4+)
-
-## Future Extensions
-
-After M8, Graphify could add:
-
-- **Graph Visualization:** Show user their usage as a graph
-- **Sync:** Optional cloud backup of patterns
-- **Sharing:** Share patterns between devices
-- **NLP:** Natural language queries ("What apps do I use in the morning?")
-
----
-
-## File Structure
-
-```
-graphify/
-├── GraphifyDB.kt          # Room database
-├── GraphifyRepository.kt   # Data access layer
-└── nodes/
-    ├── AppNode.kt
-    ├── AppNodeDao.kt
-    ├── TaskNode.kt
-    ├── TaskNodeDao.kt
-    ├── ContactNode.kt
-    ├── PatternNode.kt
-    └── Edge.kt
-```
+1. Design account/profile identity and data partitioning.
+2. Decide database encryption and per-profile retention/deletion.
+3. Enable Room schema export and add migration tests.
+4. Add account-isolation tests before adding multi-account UI.
+5. Review contact extraction for Spanish commands and ambiguous names.
+6. Measure query performance using representative data rather than undocumented estimates.

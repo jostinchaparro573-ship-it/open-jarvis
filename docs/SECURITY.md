@@ -1,184 +1,76 @@
-# Security — Open Jarvis
+# Security and Privacy — OpenJarvis
 
-## Security Model
+## Status
 
-Open Jarvis has a defense-in-depth security architecture focusing on user privacy and device safety.
+OpenJarvis is under active development. This document describes observed code behavior, not an independent security certification. Do not treat the app as release-ready.
 
----
+## Safeguards currently present
 
-## Core Principles
+- Android app components are generally non-exported unless they need to be launchable.
+- Android backup is disabled in the manifest.
+- Provider credentials and voice preferences use EncryptedSharedPreferences.
+- LLM action responses are validated; malformed or unsupported action plans fail closed.
+- Generic TAP and TYPE actions are blocked in AgentCore and the validator. Additional identified paths in ActionExecutor, ScreenWatcher, and AIAppInteractor are also blocked pending a real confirmation workflow.
+- The local TCP bridge is not started by OverlayService. Authentication has not been implemented, so the bridge must remain disabled.
+- Voice recognition is push-to-talk. A recognized transcript is placed in the command field and the user must tap Send.
+- The notification listener is not registered in AndroidManifest and is not an active feature.
 
-1. **Data stays on device** — No cloud sync, all local
-2. **Least privilege** — Only needed permissions
-3. **Defense in depth** — Multiple security layers
-4. **Transparent** — User knows what's happening
+## Android permissions and special access
 
----
+The manifest declares:
+- INTERNET for configured LLM providers
+- RECORD_AUDIO for voice input; runtime permission is requested before enabling voice
+- SYSTEM_ALERT_WINDOW for the floating overlay; the user must grant special access
+- FOREGROUND_SERVICE, FOREGROUND_SERVICE_SPECIAL_USE, and FOREGROUND_SERVICE_DATA_SYNC for foreground services
+- POST_NOTIFICATIONS for notifications
+- WAKE_LOCK
 
-## Permissions
+The AccessibilityService is declared but must be explicitly enabled by the user in Android settings. It can inspect visible UI nodes and perform supported global actions. Accessibility and overlay access should remain optional and feature-specific.
 
-### Required Permissions
+The current manifest does not request Contacts, Location, Camera, or broad external-storage permissions. The notification listener is not declared as a service.
 
-| Permission | Purpose | Risk |
-|------------|---------|------|
-| Accessibility Service | Control UI | High |
-| Overlay | Floating widget | Medium |
-| Microphone | Voice input | High |
-| Storage | Local model | Medium |
-| Network | LLM APIs | Medium |
+## Data stored locally
 
-### Not Required
+Graphify stores task commands/results, app usage, contact records, patterns, provider usage, and graph edges in a Room database named graphify.db. The database does not currently use an application-level encryption layer. Android's app sandbox and device encryption provide baseline protection but do not satisfy the project's planned per-account isolation requirement.
 
-- Camera (uses screen capture only)
-- Contacts (optional, for calls only)
-- Location (never used)
+Provider API keys and voice preferences are stored in EncryptedSharedPreferences. This is separate from the Graphify database.
 
----
+## Data that may leave the device
 
-## Privacy Protections
+When a cloud LLM provider is selected, OpenJarvis may send:
+- the user's command
+- the system prompt and task context
+- screen text when the user explicitly requests screen reading
+- relevant Graphify memory context included in the prompt
 
-### Local-First
+The selected provider's terms, retention policy, and privacy practices apply. The app cannot guarantee that provider-side data is not retained. Sensitive screen content should not be sent to a cloud provider without clear user awareness and consent. A local model path must be verified before it is described as fully offline.
 
-- Graphify database is local SQLite
-- API keys in EncryptedSharedPreferences
-- No analytics or tracking
-- No cloud backup
+HTTP debug logging was reduced to BASIC to avoid logging request/response bodies and headers. URLs and other diagnostic metadata still require review.
 
-### Notification Privacy
+## Features intentionally disabled or incomplete
 
-Banking apps blocked from notification reading:
+- Screen TAP/TYPE and direct prompt typing are blocked until per-action confirmation exists.
+- ScreenWatcher tap actions are blocked; its built-in YouTube auto-skip rule is disabled.
+- The TCP bridge is not started and has no client authentication.
+- Automation scheduling may create work, but automation execution is deliberately unavailable and must not report success.
+- WhatsApp notification capture is not active. Historical messages cannot be read by the current notification listener.
+- There is no always-on Jarvis wake phrase.
+- Autonomous phone calls and appointment booking are planned only.
+- AppBuilderMode does not currently produce a verified APK or ZIP package.
 
-```
-com.google.android.apps.authenticator2
-com Chase
-com.bankofamerica
-com.wellsfargo
-com.citibank
-com.paypal
-```
+## Open security and privacy work
 
- Jarvis won't read or reply to these notifications.
+1. Account/profile isolation across Graphify, automation records, settings, and provider credentials.
+2. Decide whether to encrypt Graphify at the application layer and add migration tests.
+3. Add user-visible data retention, per-profile deletion, and export controls.
+4. Clearly disclose cloud-provider data transfer and obtain appropriate user consent.
+5. Build explicit confirmation screens for consequential actions; test adversarial and ambiguous prompts.
+6. Review all direct AccessibilityService call paths to ensure no confirmation bypass remains.
+7. Implement strict WhatsApp group consent and matching before registering any notification listener.
+8. Review provider settings so saved provider/model values are loaded accurately and credentials are not accidentally overwritten.
+9. Audit third-party dependency licenses, update policy, and secret handling.
+10. Run Android instrumentation tests and real-device tests on the HONOR X6C.
 
----
+## Reporting
 
-## Security Features
-
-### Prompt Injection Guard
-
-```kotlin
-val injectionPatterns = listOf(
-    "ignore instructions",
-    "jailbreak",
-    "DAN mode",
-    "new instructions"
-)
-```
-
-Detects and blocks prompt injection attempts.
-
-### Provider Fallback Chain
-
-If one LLM fails:
-1. Try primary provider
-2. Wait 1 second
-3. Try fallback provider
-4. Show error with recovery suggestion
-
-### Socket Authentication
-
-Only allowed UIDs can connect:
-
-```kotlin
-val allowedUids = setOf(
-    context.applicationInfo.uid,
-    2000,  // shell
-    "com.termux".hashCode()
-)
-```
-
----
-
-## Data Handling
-
-### What's Stored
-
-- Task history (commands, results)
-- App usage patterns
-- User preferences
-- Graphify memory nodes
-
-### What's NOT Stored
-
-- Screenshots (immediate discard)
-- Voice recordings (session-only)
-- API keys (encrypted only)
-- Clipboard content (optional)
-
----
-
-## API Key Security
-
-Keys stored using EncryptedSharedPreferences:
-
-```kotlin
-val masterKey = MasterKey.Builder(context)
-    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-    .build()
-
-val prefs = EncryptedSharedPreferences.create(
-    context,
-    "secure_prefs",
-    masterKey,
-    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-)
-```
-
----
-
-## Security Best Practices
-
-1. **Review permissions** — Grant only what's needed
-2. **Use local models** — Zero network dependency
-3. **Disable voice** — If not needed
-4. **Check notifications** — Review what Jarvis reads
-5. **Update regularly** — Security fixes
-
----
-
-## Known Security Considerations
-
-### Accessibility Service
-
-The accessibility service can:
-- Read all screen content
-- Perform gestures
-- Type text
-- Launch apps
-
-This is why:
-- No network needed for operation
-- Local data storage
-- Notification privacy guard
-- Prompt injection protection
-
----
-
-## Reporting Security Issues
-
-If you find a security issue:
-1. Don't open public issue
-2. Email: security@tokenarc.com
-3. Include details
-4. We'll patch and credit
-
----
-
-## Security Checklist
-
-Before using:
-- [ ] Review permissions granted
-- [ ] Enable notification privacy
-- [ ] Use local model for sensitive tasks
-- [ ] Don't run during sensitive operations
-- [ ] Keep app updated
+Do not send security reports to the original upstream project's contact address. Use the private reporting channel configured for this repository if one is available; otherwise contact the repository owner privately and avoid publishing exploit details in a public issue.
