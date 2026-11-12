@@ -83,3 +83,8 @@ The upstream repository is MIT-licensed, but every bundled third-party dependenc
 ## Release rule
 
 No release APK, distribution, Play Store publication, or merge to main until the deep audit, required fixes, tests, privacy/security review, and explicit user approval are complete.
+
+
+### Account isolation — expanded static audit (2026-11-12)
+
+The audit inspected AppNode, TaskNode, ContactNode, PatternNode, ProviderNode, EdgeEntity, AppIntelligenceEntity and their DAOs. All personal Graphify records are globally queried within one database; edge queries are also unscoped. App intelligence has a packageName-only primary key and needs an explicit decision on whether it is device-global catalog data or per-profile learned data. No Google account identity/session implementation was found in the inspected repository tree. Do not patch only the entities: query scoping, composite uniqueness/indexes, relationship integrity, migration, deletion and account-switch behavior must be implemented together. See `docs/ACCOUNT_ISOLATION_DESIGN.md`.

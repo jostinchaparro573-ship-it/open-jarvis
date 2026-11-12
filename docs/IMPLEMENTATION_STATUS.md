@@ -89,3 +89,8 @@ The requested autonomous call agent is planned only. It must obtain explicit aut
 ## Release rule
 
 Do not merge to main, generate or distribute a release APK, install it on the user's phone, or publish anything until the deep code audit, required fixes, tests, privacy/security review, and explicit user approval are complete.
+
+
+## Account isolation design review (2026-11-12)
+
+A static audit confirmed that Graphify's current tables and DAO queries have no account/profile scope. This remains a blocker; no schema change has been made yet. See `docs/ACCOUNT_ISOLATION_DESIGN.md` for the proposed migration-safe design and test gates. Existing rows must not be silently assigned to a newly authenticated Google account.

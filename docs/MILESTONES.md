@@ -222,7 +222,7 @@ Add local LLM support via llama.cpp and Phi-3 Mini.
 
 ## M8: Optimization + Public Release
 
-**Status:** ✅ Complete
+**Status:** Unverified in this fork — inherited upstream status; release criteria have not been independently demonstrated.
 
 ### Goal
 
