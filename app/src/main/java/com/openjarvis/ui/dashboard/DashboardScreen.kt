@@ -49,7 +49,7 @@ fun DashboardScreen(
 ) {
     var recentTasks by remember { mutableStateOf<List<TaskNode>>(emptyList()) }
     var mostUsedApps by remember { mutableStateOf<List<AppNode>>(emptyList()) }
-    var isSystemActive by remember { mutableStateOf(true) }
+    var activePatternCount by remember { mutableIntStateOf(0) }
     
     var heroAlpha by remember { mutableFloatStateOf(0f) }
     var statsAlpha by remember { mutableFloatStateOf(0f) }
@@ -59,6 +59,10 @@ fun DashboardScreen(
     LaunchedEffect(Unit) {
         recentTasks = graphifyRepo.getRecentTasks(10)
         mostUsedApps = graphifyRepo.getMostUsedApps(4)
+        activePatternCount = graphifyRepo.getActivePatterns(
+            System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000,
+            0.3f
+        ).size
     }
     
     LaunchedEffect(Unit) {
@@ -89,11 +93,11 @@ fun DashboardScreen(
         ) {
             Spacer(modifier = Modifier.height(56.dp))
             
-            HeroSection(isSystemActive = isSystemActive)
+            HeroSection(onStartOverlay = onStartOverlay)
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            StatsRow(tasks = recentTasks, alpha = statsAlpha)
+            StatsRow(tasks = recentTasks, appsCount = mostUsedApps.size, patternCount = activePatternCount, alpha = statsAlpha)
             
             Spacer(modifier = Modifier.height(24.dp))
             
@@ -145,7 +149,7 @@ private fun OrbBackground() {
 }
 
 @Composable
-private fun HeroSection(isSystemActive: Boolean) {
+private fun HeroSection(onStartOverlay: () -> Unit) {
     Column {
         Surface(
             shape = RoundedCornerShape(999.dp),
@@ -203,12 +207,28 @@ private fun HeroSection(isSystemActive: Boolean) {
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        StatusBadge(isActive = isSystemActive)
+        StatusBadge()
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = onStartOverlay,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = VoidColor.Violet,
+                contentColor = Color.White
+            ),
+            shape = RoundedCornerShape(999.dp)
+        ) {
+            Text(
+                text = "Start Jarvis overlay",
+                style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight(600))
+            )
+        }
     }
 }
 
 @Composable
-private fun StatusBadge(isActive: Boolean) {
+private fun StatusBadge() {
     val infiniteTransition = rememberInfiniteTransition(label = "badge")
     
     val dotScale by infiniteTransition.animateFloat(
@@ -221,21 +241,10 @@ private fun StatusBadge(isActive: Boolean) {
         label = "dot_scale"
     )
     
-    val (bgColor, borderColor, textColor, dotColor) = if (isActive) {
-        listOf(
-            VoidColor.Green.copy(alpha = 0.08f),
-            VoidColor.Green.copy(alpha = 0.25f),
-            VoidColor.Green,
-            VoidColor.Green
-        )
-    } else {
-        listOf(
-            VoidColor.Red.copy(alpha = 0.08f),
-            VoidColor.Red.copy(alpha = 0.25f),
-            VoidColor.Red,
-            VoidColor.Red
-        )
-    }
+    val bgColor = VoidColor.Violet.copy(alpha = 0.08f)
+    val borderColor = VoidColor.BorderGlow
+    val textColor = VoidColor.TextSecondary
+    val dotColor = VoidColor.Violet
     
     Surface(
         shape = RoundedCornerShape(999.dp),
@@ -259,7 +268,7 @@ private fun StatusBadge(isActive: Boolean) {
             Spacer(modifier = Modifier.width(8.dp))
             
             Text(
-                text = if (isActive) "System Active" else "Tap to Activate",
+                text = "Dashboard Ready",
                 style = TextStyle(
                     fontFamily = FontFamily.Default,
                     fontWeight = FontWeight(500),
@@ -272,7 +281,7 @@ private fun StatusBadge(isActive: Boolean) {
 }
 
 @Composable
-private fun StatsRow(tasks: List<TaskNode>, alpha: Float) {
+private fun StatsRow(tasks: List<TaskNode>, appsCount: Int, patternCount: Int, alpha: Float) {
     val animatedCount by animateIntAsState(
         targetValue = tasks.size.coerceAtLeast(0),
         animationSpec = tween(500, easing = EaseOutQuart),
@@ -286,17 +295,17 @@ private fun StatsRow(tasks: List<TaskNode>, alpha: Float) {
         ) {
             StatCard(
                 count = animatedCount,
-                label = "Tasks Done",
+                label = "Recent Tasks",
                 modifier = Modifier.weight(1f)
             )
             StatCard(
-                count = 0,
-                label = "Apps Used",
+                count = appsCount,
+                label = "Top Apps",
                 modifier = Modifier.weight(1f)
             )
             StatCard(
-                count = 0,
-                label = "Patterns",
+                count = patternCount,
+                label = "Active Patterns",
                 modifier = Modifier.weight(1f)
             )
         }
@@ -354,15 +363,7 @@ private fun RecentTasksSection(tasks: List<TaskNode>, alpha: Float) {
                     color = VoidColor.TextDisabled
                 )
             )
-            Text(
-                text = "see all →",
-                style = TextStyle(
-                    fontFamily = FontFamily.Default,
-                    fontWeight = FontWeight(500),
-                    fontSize = 11.sp,
-                    color = VoidColor.Violet
-                )
-            )
+
         }
         
         Spacer(modifier = Modifier.height(12.dp))
@@ -388,7 +389,10 @@ private fun RecentTasksSection(tasks: List<TaskNode>, alpha: Float) {
 
 @Composable
 private fun TaskCard(task: TaskNode) {
-    val isSuccess = task.result.contains("Opened") || task.result.contains("Success")
+    val normalizedResult = task.result.lowercase()
+    val isSuccess = normalizedResult.contains("opened") ||
+        normalizedResult.contains("success") ||
+        normalizedResult.contains("done")
     val outcomeColor = if (isSuccess) VoidColor.Green else VoidColor.Red
     
     Surface(
@@ -449,7 +453,7 @@ private fun TaskCard(task: TaskNode) {
                     Spacer(modifier = Modifier.width(8.dp))
                     
                     Text(
-                        text = "System App",
+                        text = task.providerUsed ?: "Local action",
                         style = TextStyle(
                             fontFamily = FontFamily.Default,
                             fontSize = 11.sp,
@@ -590,10 +594,10 @@ private fun BottomNavBar(
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                val items = listOf("Home", "Tasks", "Settings")
+                val items = listOf("Home", "Settings")
                 
                 items.forEachIndexed { index, item ->
-                    val isSelected = item == "Home" || item == "Tasks"
+                    val isSelected = item == "Home"
                     val isSettings = item == "Settings"
                     
                     Column(
