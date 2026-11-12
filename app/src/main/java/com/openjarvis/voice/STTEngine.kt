@@ -9,5 +9,5 @@ interface STTEngine {
 
 enum class STTMode {
     PUSH_TO_TALK,  // Hold mic → record, release → transcribe
-    AUTO_VAD      // Tap → record until silence → auto-transcribe
+    AUTO_VAD      // Android SpeechRecognizer end-of-speech; not a local VAD implementation
 }
