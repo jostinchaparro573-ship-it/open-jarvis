@@ -2,9 +2,6 @@ package com.openjarvis.voice
 
 import android.content.Context
 import android.content.Intent
-import android.media.AudioFormat
-import android.media.AudioRecord
-import android.media.MediaRecorder
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
@@ -12,7 +9,6 @@ import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.Locale
@@ -20,14 +16,10 @@ import java.util.Locale
 class AndroidSTTEngine(private val context: Context) : STTEngine {
 
     companion object {
-        const val SAMPLE_RATE = 16000
-        const val SILENCE_THRESHOLD = 500
         const val SILENCE_TIMEOUT_MS = 1500L
-        const val MAX_RECORDING_MS = 30000L
     }
 
     private var recognizer: SpeechRecognizer? = null
-    private var audioRecord: AudioRecord? = null
     private var _isListening = MutableStateFlow(false)
     val isListeningState: StateFlow<Boolean> = _isListening
 
@@ -35,11 +27,9 @@ class AndroidSTTEngine(private val context: Context) : STTEngine {
     private var currentErrorCallback: ((String) -> Unit)? = null
     private var pendingResult: String? = null
 
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private var silenceStartTime = -1L
-    private var recordingStartTime = -1L
 
     init {
         mainHandler.post {
@@ -52,17 +42,7 @@ class AndroidSTTEngine(private val context: Context) : STTEngine {
                 override fun onBeginningOfSpeech() {}
 
                 override fun onRmsChanged(rmsdB: Float) {
-                    if (rmsdB * 100 < SILENCE_THRESHOLD) {
-                        if (silenceStartTime < 0) {
-                            silenceStartTime = System.currentTimeMillis()
-                        }
-                        val silenceDuration = System.currentTimeMillis() - silenceStartTime
-                        if (silenceDuration >= SILENCE_TIMEOUT_MS && audioRecord != null) {
-                            stopListeningEarly()
-                        }
-                    } else {
-                        silenceStartTime = -1
-                    }
+                    // Android SpeechRecognizer manages speech endpoint detection.
                 }
 
                 override fun onBufferReceived(buffer: ByteArray?) {}
@@ -160,21 +140,10 @@ class AndroidSTTEngine(private val context: Context) : STTEngine {
         }
     }
 
-    private fun stopListeningEarly() {
-        recognizer?.stopListening()
-        audioRecord?.stop()
-        audioRecord?.release()
-        audioRecord = null
-    }
-
     override fun stop(): String? {
         // Android delivers the final transcript asynchronously through onResults.
         // Keep callbacks registered so a press-to-talk release cannot discard it.
         recognizer?.stopListening()
-
-        audioRecord?.stop()
-        audioRecord?.release()
-        audioRecord = null
 
         val result = pendingResult
         pendingResult = null
@@ -187,65 +156,6 @@ class AndroidSTTEngine(private val context: Context) : STTEngine {
         stop()
         recognizer?.destroy()
         recognizer = null
-        scope.cancel()
     }
 
-    // Push-to-talk: start audio capture manually (for VAD mode)
-    fun startAudioCapture(): Boolean {
-        val bufferSize = AudioRecord.getMinBufferSize(
-            SAMPLE_RATE,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
-        )
-        
-        return try {
-            audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                SAMPLE_RATE,
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                bufferSize * 4
-            )
-            audioRecord?.startRecording()
-            recordingStartTime = System.currentTimeMillis()
-            true
-        } catch (e: SecurityException) {
-            false
-        }
-    }
-
-    // Capture audio with VAD
-    suspend fun captureWithVAD(): FloatArray = withContext(Dispatchers.IO) {
-        val bufferSize = AudioRecord.getMinBufferSize(
-            SAMPLE_RATE,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
-        )
-        val shortBuffer = ShortArray(bufferSize / 2)
-        val allSamples = mutableListOf<Short>()
-
-        while (_isListening.value) {
-            val elapsed = System.currentTimeMillis() - recordingStartTime
-            if (elapsed >= MAX_RECORDING_MS) break
-
-            val read = audioRecord?.read(shortBuffer, 0, shortBuffer.size) ?: break
-            if (read <= 0) continue
-
-            allSamples.addAll(shortBuffer.take(read))
-
-            // Simple VAD: check max amplitude
-            val amplitude = shortBuffer.take(read).maxOfOrNull { kotlin.math.abs(it.toInt()) } ?: 0
-            if (amplitude < SILENCE_THRESHOLD) {
-                if (silenceStartTime < 0) silenceStartTime = System.currentTimeMillis()
-                if (System.currentTimeMillis() - silenceStartTime >= SILENCE_TIMEOUT_MS) {
-                    stop()
-                    break
-                }
-            } else {
-                silenceStartTime = -1
-            }
-        }
-
-        allSamples.map { it.toFloat() / Short.MAX_VALUE }.toFloatArray()
-    }
 }
