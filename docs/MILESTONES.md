@@ -35,6 +35,10 @@ When F0 is fully complete, explicitly remind the user: “The first structural s
 ---
 
 
+## Voice activation requirement (cross-cutting)
+
+The user selected two equivalent wake phrases: **“OK Jarvis”** and **“Hey Jarvis”**. Both must be supported; activation must not rely on the single word “Jarvis”. This is a planned capability, not currently implemented. See `docs/VOICE_ACTIVATION.md` for opt-in privacy, offline detection, Android foreground-service constraints, battery/thermal testing, and acceptance criteria.
+
 ## Overview
 
 Open Jarvis development is organized into 8 milestones, each building on the previous one to create a complete AI agent.
