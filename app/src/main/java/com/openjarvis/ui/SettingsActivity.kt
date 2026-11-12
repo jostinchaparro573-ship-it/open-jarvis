@@ -18,6 +18,7 @@ class SettingsActivity : ComponentActivity() {
     
     private lateinit var masterKey: MasterKey
     private lateinit var prefs: android.content.SharedPreferences
+    private lateinit var voicePrefs: android.content.SharedPreferences
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +37,13 @@ class SettingsActivity : ComponentActivity() {
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
+        voicePrefs = EncryptedSharedPreferences.create(
+            this,
+            "voice_prefs",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
         
         setContent {
             OpenJarvisTheme {
@@ -43,6 +51,14 @@ class SettingsActivity : ComponentActivity() {
                     onNavigateBack = { finish() },
                     onSaveProvider = { name, baseUrl, apiKey, model ->
                         saveProviderSettings(name, baseUrl, apiKey, model)
+                    },
+                    initialVoiceEnabled = voicePrefs.getBoolean("voice_enabled", false),
+                    initialSpeakResults = voicePrefs.getBoolean("speak_results", true),
+                    onVoiceEnabledChange = { enabled ->
+                        voicePrefs.edit().putBoolean("voice_enabled", enabled).apply()
+                    },
+                    onSpeakResultsChange = { enabled ->
+                        voicePrefs.edit().putBoolean("speak_results", enabled).apply()
                     },
                     modifier = Modifier.fillMaxSize()
                 )
