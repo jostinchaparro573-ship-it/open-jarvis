@@ -21,11 +21,11 @@ class ProviderFallbackChain(private val context: Context) {
      */
     suspend fun completeWithFallback(system: String, user: String): Result<String> {
         val adapter = UniversalAdapter(context)
-        val provider = adapter.getActiveProvider()
-        val providerName = provider.name
+        val providerName = adapter.getProviderName()
 
         return try {
-            val result = provider.complete(system, user)
+            // Route through UniversalAdapter so cloud-consent enforcement cannot be bypassed.
+            val result = adapter.complete(system, user)
             if (result.isFailure) {
                 val message = result.exceptionOrNull()?.message.orEmpty()
                 _notification.value = when {
