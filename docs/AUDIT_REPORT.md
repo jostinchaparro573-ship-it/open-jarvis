@@ -108,3 +108,8 @@ The Gemini provider previously placed its API key in the request URL query param
 ### Security fix in latest branch commit
 
 Gemini generation and connection-test requests now put the API key in the `x-goog-api-key` header rather than the URL query parameter. The reason is that the current BASIC HTTP logging interceptor records request lines, which can include query parameters. CI is pending for this change; provider integration testing is still outstanding.
+
+
+### High — Gemini model default was retired
+
+The code previously defaulted to `gemini-1.5-flash`, which Google shut down on 2025-09-29. The current default is updated to `gemini-3.8-flash`. The Settings screen also now restores the saved provider configuration and resets provider-specific credentials when changing provider, avoiding accidental reuse of one provider's API key with another. A real Gemini connection test is still required. Google's current model/deprecation documentation is the source of truth for model availability.

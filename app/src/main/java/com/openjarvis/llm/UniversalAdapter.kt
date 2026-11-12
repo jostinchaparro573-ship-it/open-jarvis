@@ -24,7 +24,9 @@ class UniversalAdapter(private val context: Context) {
         val name = prefs.getString("provider_name", "Groq") ?: "Groq"
         val baseUrl = prefs.getString("provider_base_url", "") ?: ""
         val apiKey = prefs.getString("provider_api_key", "") ?: ""
-        val model = prefs.getString("provider_model", "") ?: ""
+        val model = prefs.getString("provider_model", null)
+            ?.takeIf { it.isNotBlank() }
+            ?: getDefaultModel(name)
         
         return when (name) {
             "Groq" -> GroqProvider(apiKey, model)
@@ -91,7 +93,7 @@ class UniversalAdapter(private val context: Context) {
         
         fun getDefaultModel(provider: String): String = when (provider) {
             "Groq" -> "llama-3.1-70b-versatile"
-            "Google Gemini" -> "gemini-1.5-flash"
+            "Google Gemini", "gemini" -> "gemini-3.8-flash"
             "OpenRouter" -> "meta-llama/llama-3-8b-instruct:free"
             "Anthropic Claude" -> "claude-haiku-4-20250514"
             "OpenAI" -> "gpt-4o-mini"

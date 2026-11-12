@@ -13,7 +13,7 @@ import org.json.JSONObject
 
 class GeminiProvider(
     private val apiKey: String,
-    private val model: String = "gemini-1.5-flash"
+    private val model: String = "gemini-3.8-flash"
 ) : LLMProvider {
     
     override val name: String = "Google Gemini"

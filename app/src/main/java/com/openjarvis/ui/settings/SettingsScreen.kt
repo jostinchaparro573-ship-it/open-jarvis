@@ -45,16 +45,22 @@ import com.openjarvis.ui.theme.VoidColor
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onSaveProvider: (String, String, String, String) -> Unit,
+    initialProviderName: String = "Groq",
+    initialBaseUrl: String = "",
+    initialApiKey: String = "",
+    initialModel: String = "llama-3.1-70b-versatile",
     initialVoiceEnabled: Boolean = false,
     initialSpeakResults: Boolean = true,
     onVoiceEnabledChange: (Boolean) -> Unit = {},
     onSpeakResultsChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var selectedProvider by remember { mutableStateOf("Groq") }
-    var baseUrl by remember { mutableStateOf("") }
-    var apiKey by remember { mutableStateOf("") }
-    var model by remember { mutableStateOf("llama-3.1-70b-versatile") }
+    var selectedProvider by remember { mutableStateOf(initialProviderName) }
+    var baseUrl by remember { mutableStateOf(initialBaseUrl) }
+    var apiKey by remember { mutableStateOf(initialApiKey) }
+    var model by remember {
+        mutableStateOf(initialModel.ifBlank { UniversalAdapter.getDefaultModel(initialProviderName) })
+    }
     var showBaseUrlField by remember { mutableStateOf(false) }
     var showProvidersDropdown by remember { mutableStateOf(false) }
     var showPassword by remember { mutableStateOf(false) }
@@ -119,6 +125,13 @@ fun SettingsScreen(
                     isExpanded = showProvidersDropdown,
                     onToggle = { showProvidersDropdown = !showProvidersDropdown },
                     onSelect = { provider ->
+                        if (provider != selectedProvider) {
+                            // Only one provider credential set is currently stored.
+                            // Clear it on provider change rather than reuse another provider's key.
+                            apiKey = ""
+                            baseUrl = ""
+                            model = UniversalAdapter.getDefaultModel(provider)
+                        }
                         selectedProvider = provider
                         showProvidersDropdown = false
                     }

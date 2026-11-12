@@ -304,3 +304,10 @@ Each provider should handle:
 ### Required provider configuration model
 
 Use a profile-scoped provider configuration record keyed by (profileId, providerId), with provider type, base URL, model, credential reference, enabled state, and priority. Store secrets separately in an encrypted vault; do not store plaintext keys in Room. Fallback must skip disabled/unconfigured providers, respect rate limits, avoid retrying the same provider, and surface the provider that ultimately answered. Before sending a user's prompt to a different cloud provider, show the data-transfer implications and respect the user's configured consent.
+
+
+## Gemini model compatibility update (2026-11-12)
+
+The previous default `gemini-1.5-flash` is shut down and cannot be used. The default was updated in the app to `gemini-3.8-flash`, a currently listed stable Gemini model. The API key is sent in the `x-goog-api-key` header. Users may still enter a different model ID manually, so model availability should be validated with a real provider connection test before release.
+
+Only one provider credential set is currently persisted. When the user changes provider in Settings, the UI clears the previous provider's key and base URL instead of accidentally reusing credentials for a different provider. Settings now reload the saved provider, model, base URL and API key when reopened.

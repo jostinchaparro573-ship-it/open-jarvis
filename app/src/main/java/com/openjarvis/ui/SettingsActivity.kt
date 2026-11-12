@@ -11,6 +11,7 @@ import androidx.core.view.WindowCompat
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.openjarvis.R
+import com.openjarvis.llm.UniversalAdapter
 import com.openjarvis.ui.settings.SettingsScreen
 import com.openjarvis.ui.theme.OpenJarvisTheme
 
@@ -49,6 +50,14 @@ class SettingsActivity : ComponentActivity() {
             OpenJarvisTheme {
                 SettingsScreen(
                     onNavigateBack = { finish() },
+                    initialProviderName = prefs.getString("provider_name", "Groq") ?: "Groq",
+                    initialBaseUrl = prefs.getString("provider_base_url", "") ?: "",
+                    initialApiKey = prefs.getString("provider_api_key", "") ?: "",
+                    initialModel = prefs.getString("provider_model", null)
+                        ?.takeIf { it.isNotBlank() }
+                        ?: UniversalAdapter.getDefaultModel(
+                            prefs.getString("provider_name", "Groq") ?: "Groq"
+                        ),
                     onSaveProvider = { name, baseUrl, apiKey, model ->
                         saveProviderSettings(name, baseUrl, apiKey, model)
                     },
