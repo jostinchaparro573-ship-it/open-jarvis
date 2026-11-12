@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -49,6 +51,8 @@ fun SettingsScreen(
     initialBaseUrl: String = "",
     initialApiKey: String = "",
     initialModel: String = "llama-3.1-70b-versatile",
+    initialCloudDataConsent: Boolean = false,
+    onCloudDataConsentChange: (Boolean) -> Unit = {},
     initialVoiceEnabled: Boolean = false,
     initialSpeakResults: Boolean = true,
     onVoiceEnabledChange: (Boolean) -> Unit = {},
@@ -66,6 +70,7 @@ fun SettingsScreen(
     var showPassword by remember { mutableStateOf(false) }
     var lastSaved by remember { mutableStateOf(0L) }
     var savedVisible by remember { mutableStateOf(false) }
+    var cloudDataConsent by remember { mutableStateOf(initialCloudDataConsent) }
     var voiceEnabled by remember { mutableStateOf(initialVoiceEnabled) }
     var speakResults by remember { mutableStateOf(initialSpeakResults) }
     val context = LocalContext.current
@@ -133,6 +138,9 @@ fun SettingsScreen(
                             model = UniversalAdapter.getDefaultModel(provider)
                         }
                         selectedProvider = provider
+                        // Consent is provider-specific: changing provider revokes it.
+                        cloudDataConsent = false
+                        onCloudDataConsentChange(false)
                         showProvidersDropdown = false
                     }
                 )
@@ -187,8 +195,41 @@ fun SettingsScreen(
                     }
                 )
                 
+                Spacer(modifier = Modifier.height(24.dp))
+
+                SectionLabel("PRIVACY")
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                SettingsToggleRow(
+                    title = "Cloud Data Sharing",
+                    subtitle = if (cloudDataConsent) {
+                        "Enabled · prompts and included context may be sent to " + selectedProvider
+                    } else {
+                        "Disabled · cloud providers cannot receive your prompts"
+                    },
+                    enabled = cloudDataConsent,
+                    icon = Icons.Default.Cloud,
+                    onToggle = {
+                        cloudDataConsent = !cloudDataConsent
+                        onCloudDataConsentChange(cloudDataConsent)
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "When enabled, Jarvis may send your typed or transcribed command and the context included with it — such as text you explicitly ask it to read from the screen and relevant memory — to the selected cloud AI provider. This is separate from microphone and Accessibility permissions. Local Ollama/LlamaCpp providers do not require this setting. Turn it off any time.",
+                    style = TextStyle(
+                        fontFamily = FontFamily.Default,
+                        fontWeight = FontWeight(400),
+                        fontSize = 11.sp,
+                        color = VoidColor.TextDisabled
+                    )
+                )
+
                 Spacer(modifier = Modifier.height(32.dp))
-                
+
                 SectionLabel("VOICE")
                 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -241,7 +282,7 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Mic,
+                                imageVector = icon,
                                 contentDescription = null,
                                 tint = VoidColor.TextDisabled,
                                 modifier = Modifier.size(20.dp)
@@ -609,6 +650,7 @@ private fun SettingsToggleRow(
     title: String,
     subtitle: String,
     enabled: Boolean,
+    icon: ImageVector = Icons.Default.Mic,
     onToggle: (() -> Unit)? = null
 ) {
     Surface(

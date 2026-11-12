@@ -45,12 +45,43 @@ class UniversalAdapter(private val context: Context) {
         }
     }
     
+    /**
+     * Cloud providers receive the user's command plus any prompt context assembled
+     * by the caller (which may include screen text and personal memory). A local
+     * provider does not require this opt-in.
+     */
+    fun hasCloudDataConsent(): Boolean =
+        prefs.getBoolean(KEY_CLOUD_DATA_CONSENT, false)
+
+    fun setCloudDataConsent(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_CLOUD_DATA_CONSENT, enabled).apply()
+    }
+
+    fun isCloudProvider(name: String = getProviderName()): Boolean =
+        name !in LOCAL_PROVIDERS
+
     suspend fun complete(
         systemPrompt: String,
         userMessage: String
-    ): Result<String> = getActiveProvider().complete(systemPrompt, userMessage)
-    
-    suspend fun testConnection(): Result<Long> = getActiveProvider().testConnection()
+    ): Result<String> {
+        val providerName = getProviderName()
+        if (isCloudProvider(providerName) && !hasCloudDataConsent()) {
+            return Result.failure(CloudDataConsentRequiredException())
+        }
+        return getActiveProvider().complete(systemPrompt, userMessage)
+    }
+
+    suspend fun testConnection(): Result<Long> {
+        val providerName = getProviderName()
+        if (isCloudProvider(providerName) && !hasCloudDataConsent()) {
+            return Result.failure(CloudDataConsentRequiredException())
+        }
+        return getActiveProvider().testConnection()
+    }
+
+    class CloudDataConsentRequiredException : Exception(
+        "Cloud AI is disabled. Review and enable Cloud Data Sharing in Settings to send text to the selected provider."
+    )
     
     fun saveSettings(name: String, baseUrl: String, apiKey: String, model: String) {
         prefs.edit().apply {
@@ -65,6 +96,9 @@ class UniversalAdapter(private val context: Context) {
     fun getProviderName(): String = prefs.getString("provider_name", "Groq") ?: "Groq"
     
     companion object {
+        private const val KEY_CLOUD_DATA_CONSENT = "cloud_data_sharing_enabled"
+        private val LOCAL_PROVIDERS = setOf("Ollama (Local)", "Local (LlamaCpp)")
+
         private var modelManager: ModelManager? = null
         
         val AVAILABLE_PROVIDERS = listOf(

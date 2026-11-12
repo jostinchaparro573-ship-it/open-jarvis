@@ -61,6 +61,10 @@ class SettingsActivity : ComponentActivity() {
                     onSaveProvider = { name, baseUrl, apiKey, model ->
                         saveProviderSettings(name, baseUrl, apiKey, model)
                     },
+                    initialCloudDataConsent = prefs.getBoolean("cloud_data_sharing_enabled", false),
+                    onCloudDataConsentChange = { enabled ->
+                        prefs.edit().putBoolean("cloud_data_sharing_enabled", enabled).apply()
+                    },
                     initialVoiceEnabled = voicePrefs.getBoolean("voice_enabled", false),
                     initialSpeakResults = voicePrefs.getBoolean("speak_results", true),
                     onVoiceEnabledChange = { enabled ->
