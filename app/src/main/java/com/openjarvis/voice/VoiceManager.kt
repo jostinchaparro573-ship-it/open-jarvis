@@ -120,7 +120,9 @@ class VoiceManager(private val context: Context) {
         _state.value = if (!text.isNullOrBlank()) {
             VoiceState.Result(text)
         } else {
-            VoiceState.Idle
+            // SpeechRecognizer returns its final transcript asynchronously.
+            // Keep the UI in a truthful transcribing state until its callback arrives.
+            VoiceState.Transcribing
         }
         return text
     }
