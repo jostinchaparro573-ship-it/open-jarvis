@@ -19,16 +19,17 @@ data class AutomationEntity(
     val enabled: Boolean = true,
     val lastRun: Long? = null,
     val lastResult: String? = null,
-    val runCount: Int = 0
+    val runCount: Int = 0,
+    @ColumnInfo(defaultValue = "'legacy-local'") val profileId: String = "legacy-local"
 )
 
 @Dao
 interface AutomationDao {
-    @Query("SELECT * FROM automations ORDER BY name")
-    suspend fun getAll(): List<AutomationEntity>
+    @Query("SELECT * FROM automations WHERE profileId = :profileId ORDER BY name")
+    suspend fun getAll(profileId: String): List<AutomationEntity>
 
-    @Query("SELECT * FROM automations WHERE id = :id")
-    suspend fun getById(id: String): AutomationEntity?
+    @Query("SELECT * FROM automations WHERE id = :id AND profileId = :profileId")
+    suspend fun getById(id: String, profileId: String): AutomationEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(automation: AutomationEntity)
@@ -36,11 +37,11 @@ interface AutomationDao {
     @Update
     suspend fun update(automation: AutomationEntity)
 
-    @Query("DELETE FROM automations WHERE id = :id")
-    suspend fun delete(id: String)
+    @Query("DELETE FROM automations WHERE id = :id AND profileId = :profileId")
+    suspend fun delete(id: String, profileId: String)
 }
 
-@Database(entities = [AutomationEntity::class], version = 2, exportSchema = false)
+@Database(entities = [AutomationEntity::class], version = 3, exportSchema = false)
 abstract class AutomationDB : RoomDatabase() {
     abstract fun automationDao(): AutomationDao
 
@@ -53,6 +54,13 @@ abstract class AutomationDB : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE automations ADD COLUMN profileId TEXT NOT NULL DEFAULT 'legacy-local'")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_automations_profileId ON automations(profileId)")
+            }
+        }
+
         @Volatile private var INSTANCE: AutomationDB? = null
 
         fun getInstance(context: Context): AutomationDB {
@@ -62,7 +70,7 @@ abstract class AutomationDB : RoomDatabase() {
                     AutomationDB::class.java,
                     "automations.db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                     .also { INSTANCE = it }
             }
@@ -148,10 +156,11 @@ class AutomationWorker(
 
     override suspend fun doWork(): androidx.work.ListenableWorker.Result {
         val id = inputData.getString("automation_id") ?: return Result.failure()
+        val profileId = inputData.getString("profile_id")?.takeIf { it.isNotBlank() } ?: return Result.failure()
 
         return try {
             val dao = AutomationDB.getInstance(applicationContext).automationDao()
-            val automation = dao.getById(id) ?: return Result.failure()
+            val automation = dao.getById(id, profileId) ?: return Result.failure()
             if (!automation.enabled) return Result.failure()
 
             // Deliberately fail closed: no permission-checked command executor is connected yet.

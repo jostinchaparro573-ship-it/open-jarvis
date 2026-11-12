@@ -7,7 +7,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.concurrent.TimeUnit
 
-class AutomationManager(private val context: Context) {
+class AutomationManager(
+    private val context: Context,
+    private val profileId: String = "legacy-local"
+) {
+    init { require(profileId.isNotBlank()) { "Profile ID must not be blank" } }
+    private fun workName(id: String) = "$profileId:$id"
 
     private val db = AutomationDB.getInstance(context)
     private val dao = db.automationDao()
@@ -15,39 +20,40 @@ class AutomationManager(private val context: Context) {
     val automationsFlow: StateFlow<List<Automation>> = _automationsFlow
 
     suspend fun loadAutomations() {
-        _automationsFlow.value = dao.getAll().map { it.toAutomation() }
+        _automationsFlow.value = dao.getAll(profileId).map { it.toAutomation() }
     }
 
     suspend fun createAutomation(automation: Automation): String = withContext(Dispatchers.IO) {
-        dao.insert(automation.toEntity())
+        dao.insert(automation.toEntity().copy(profileId = profileId))
         if (automation.enabled) scheduleAutomation(automation)
-        _automationsFlow.value = dao.getAll().map { it.toAutomation() }
+        _automationsFlow.value = dao.getAll(profileId).map { it.toAutomation() }
         automation.id
     }
 
     suspend fun updateAutomation(automation: Automation) = withContext(Dispatchers.IO) {
-        dao.update(automation.toEntity())
+        if (dao.getById(automation.id, profileId) == null) return@withContext
+        dao.update(automation.toEntity().copy(profileId = profileId))
         cancelAutomation(automation.id)
         if (automation.enabled) scheduleAutomation(automation)
-        _automationsFlow.value = dao.getAll().map { it.toAutomation() }
+        _automationsFlow.value = dao.getAll(profileId).map { it.toAutomation() }
     }
 
     suspend fun deleteAutomation(id: String) = withContext(Dispatchers.IO) {
         cancelAutomation(id)
-        dao.delete(id)
-        _automationsFlow.value = dao.getAll().map { it.toAutomation() }
+        dao.delete(id, profileId)
+        _automationsFlow.value = dao.getAll(profileId).map { it.toAutomation() }
     }
 
     suspend fun toggleAutomation(id: String, enabled: Boolean) = withContext(Dispatchers.IO) {
-        val stored = dao.getById(id) ?: return@withContext
+        val stored = dao.getById(id, profileId) ?: return@withContext
         val updated = stored.copy(enabled = enabled)
         dao.update(updated)
         if (enabled) scheduleAutomation(updated.toAutomation()) else cancelAutomation(id)
-        _automationsFlow.value = dao.getAll().map { it.toAutomation() }
+        _automationsFlow.value = dao.getAll(profileId).map { it.toAutomation() }
     }
 
     suspend fun runNow(id: String) = withContext(Dispatchers.IO) {
-        val stored = dao.getById(id) ?: return@withContext
+        val stored = dao.getById(id, profileId) ?: return@withContext
         recordNotExecuted(stored)
     }
 
@@ -60,6 +66,7 @@ class AutomationManager(private val context: Context) {
 
         val inputData = workDataOf(
             "automation_id" to automation.id,
+            "profile_id" to profileId,
             "automation_command" to automation.command
         )
 
@@ -72,10 +79,10 @@ class AutomationManager(private val context: Context) {
                     .setConstraints(constraints)
                     .setInputData(inputData)
                     .setInitialDelay(calculateDelay(schedule.hour, schedule.minute), TimeUnit.MILLISECONDS)
-                    .addTag(automation.id)
+                    .addTag(workName(automation.id))
                     .build()
                 workManager.enqueueUniquePeriodicWork(
-                    automation.id, ExistingPeriodicWorkPolicy.REPLACE, request
+                    workName(automation.id), ExistingPeriodicWorkPolicy.REPLACE, request
                 )
             }
             is AutomationSchedule.Weekly -> {
@@ -85,10 +92,10 @@ class AutomationManager(private val context: Context) {
                     .setConstraints(constraints)
                     .setInputData(inputData)
                     .setInitialDelay(calculateWeeklyDelay(schedule.dayOfWeek, schedule.hour, schedule.minute), TimeUnit.MILLISECONDS)
-                    .addTag(automation.id)
+                    .addTag(workName(automation.id))
                     .build()
                 workManager.enqueueUniquePeriodicWork(
-                    automation.id, ExistingPeriodicWorkPolicy.REPLACE, request
+                    workName(automation.id), ExistingPeriodicWorkPolicy.REPLACE, request
                 )
             }
             is AutomationSchedule.Interval -> {
@@ -100,33 +107,33 @@ class AutomationManager(private val context: Context) {
                 )
                     .setConstraints(constraints)
                     .setInputData(inputData)
-                    .addTag(automation.id)
+                    .addTag(workName(automation.id))
                     .build()
                 workManager.enqueueUniquePeriodicWork(
-                    automation.id, ExistingPeriodicWorkPolicy.REPLACE, request
+                    workName(automation.id), ExistingPeriodicWorkPolicy.REPLACE, request
                 )
             }
             is AutomationSchedule.Once -> {
                 val delay = schedule.atMs - System.currentTimeMillis()
                 if (delay <= 0) {
-                    recordNotExecuted(automation.toEntity())
+                    recordNotExecuted(automation.toEntity().copy(profileId = profileId))
                     return
                 }
                 val request = OneTimeWorkRequestBuilder<AutomationWorker>()
                     .setConstraints(constraints)
                     .setInputData(inputData)
                     .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-                    .addTag(automation.id)
+                    .addTag(workName(automation.id))
                     .build()
                 workManager.enqueueUniqueWork(
-                    automation.id, ExistingWorkPolicy.REPLACE, request
+                    workName(automation.id), ExistingWorkPolicy.REPLACE, request
                 )
             }
         }
     }
 
     private fun cancelAutomation(id: String) {
-        WorkManager.getInstance(context).cancelAllWorkByTag(id)
+        WorkManager.getInstance(context).cancelAllWorkByTag(workName(id))
     }
 
     private suspend fun recordNotExecuted(automation: AutomationEntity) {
@@ -137,7 +144,7 @@ class AutomationManager(private val context: Context) {
                 runCount = automation.runCount
             )
         )
-        _automationsFlow.value = dao.getAll().map { it.toAutomation() }
+        _automationsFlow.value = dao.getAll(profileId).map { it.toAutomation() }
     }
 
     private fun calculateDelay(targetHour: Int, targetMinute: Int): Long {
