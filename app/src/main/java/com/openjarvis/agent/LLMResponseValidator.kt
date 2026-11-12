@@ -9,7 +9,7 @@ object LLMResponseValidator {
     // Only actions currently implemented by AgentCore are accepted.
     // Unsupported actions fail validation instead of being silently ignored.
     private val knownActions = setOf(
-        "open_app", "tap", "type", "press_back", "press_home",
+        "open_app", "press_back", "press_home",
         "press_recents", "extract_text", "error"
     )
     
@@ -62,8 +62,6 @@ object LLMResponseValidator {
 
             val missingRequiredField = when (actionType) {
                 "open_app" -> obj.optString("label").isBlank()
-                "tap" -> obj.optString("text").isBlank()
-                "type" -> !obj.has("value") || obj.isNull("value")
                 "error" -> obj.optString("message").isBlank()
                 else -> false
             }

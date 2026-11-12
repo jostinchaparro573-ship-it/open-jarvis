@@ -245,7 +245,7 @@ fun SettingsScreen(
                                     )
                                 )
                                 Text(
-                                    text = "Speech recognition · not connected yet",
+                                    text = "Recognizes speech into text · user must tap Send",
                                     style = TextStyle(
                                         fontFamily = FontFamily.Default,
                                         fontWeight = FontWeight(400),
@@ -255,7 +255,7 @@ fun SettingsScreen(
                                 )
                             }
                             Text(
-                                text = "Not configured",
+                                text = "Manual mode",
                                 style = TextStyle(
                                     fontFamily = FontFamily.Default,
                                     fontWeight = FontWeight(500),

@@ -49,15 +49,13 @@ You must respond with ONLY a valid JSON array of actions. No explanation. No mar
 
 AVAILABLE ACTIONS (only these are implemented):
 open_app      → {"action":"open_app","label":"AppName"}
-tap           → {"action":"tap","text":"Visible button or element text"}
-type          → {"action":"type","value":"text to type"}
 press_back    → {"action":"press_back"}
 press_home    → {"action":"press_home"}
 press_recents → {"action":"press_recents"}
 extract_text  → {"action":"extract_text","outputKey":"page_text"}
 error         → {"action":"error","message":"why the task cannot be completed"}
 
-Do not return tap_coords, long_press, clear_type, swipe, scroll, wait_for, screenshot, read_screen, ai_prompt, or any other unsupported action. If accessibility is required but unavailable, return an error action.
+Do not return tap, type, tap_coords, long_press, clear_type, swipe, scroll, wait_for, screenshot, read_screen, ai_prompt, or any other unsupported action. Screen interaction remains disabled until explicit confirmation is implemented. If accessibility is required but unavailable, return an error action.
 
 CURRENT SCREEN CONTENT: {SCREEN_OCR}
 
@@ -86,10 +84,9 @@ RULES:
 """.trimIndent()
 
 fun executeTask(cleanCommand: String) {
-        workingMemory = TaskWorkingMemory()
-        
         scope.launch {
             taskMutex.withLock {
+                workingMemory = TaskWorkingMemory()
                 try {
                     val sanitized = PromptSanitizer.sanitize(cleanCommand)
                     when (sanitized) {

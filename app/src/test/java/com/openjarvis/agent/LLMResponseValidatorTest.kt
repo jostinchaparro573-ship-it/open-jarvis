@@ -39,9 +39,24 @@ class LLMResponseValidatorTest {
     }
 
     @Test
+    fun rejectsScreenActionsUntilConfirmationExists() {
+        val tap = LLMResponseValidator.validate(
+            """[{"action":"tap","text":"Send"}]"""
+        )
+        val type = LLMResponseValidator.validate(
+            """[{"action":"type","value":"hello"}]"""
+        )
+
+        assertFalse(tap.isValid)
+        assertTrue(tap.actions.isEmpty())
+        assertFalse(type.isValid)
+        assertTrue(type.actions.isEmpty())
+    }
+
+    @Test
     fun rejectsActionWithMissingRequiredArgument() {
         val result = LLMResponseValidator.validate(
-            """[{"action":"tap"}]"""
+            """[{"action":"open_app"}]"""
         )
 
         assertFalse(result.isValid)
