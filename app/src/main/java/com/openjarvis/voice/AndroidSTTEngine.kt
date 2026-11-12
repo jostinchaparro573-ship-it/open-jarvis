@@ -1,6 +1,7 @@
 package com.openjarvis.voice
 
 import android.content.Context
+import androidx.annotation.MainThread
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -28,8 +29,6 @@ class AndroidSTTEngine(private val context: Context) : STTEngine {
     private var pendingResult: String? = null
 
     private val mainHandler = Handler(Looper.getMainLooper())
-
-    private var silenceStartTime = -1L
 
     init {
         mainHandler.post {
@@ -93,12 +92,11 @@ class AndroidSTTEngine(private val context: Context) : STTEngine {
         }
     }
 
+    @MainThread
     override fun startListening(onResult: (String?) -> Unit, onError: (String) -> Unit) {
         currentCallback = onResult
         currentErrorCallback = onError
         pendingResult = null
-        silenceStartTime = -1L
-
         if (context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             currentCallback = null
             currentErrorCallback = null
@@ -140,6 +138,7 @@ class AndroidSTTEngine(private val context: Context) : STTEngine {
         }
     }
 
+    @MainThread
     override fun stop(): String? {
         // Android delivers the final transcript asynchronously through onResults.
         // Keep callbacks registered so a press-to-talk release cannot discard it.
@@ -152,10 +151,10 @@ class AndroidSTTEngine(private val context: Context) : STTEngine {
 
     override fun isListening(): Boolean = _isListening.value
 
+    @MainThread
     override fun release() {
         stop()
         recognizer?.destroy()
         recognizer = null
     }
-
 }
