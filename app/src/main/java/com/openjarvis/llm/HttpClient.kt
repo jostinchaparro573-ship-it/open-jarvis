@@ -19,7 +19,7 @@ object HttpClient {
             .retryOnConnectionFailure(true)
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = if (com.openjarvis.BuildConfig.DEBUG) {
-                    HttpLoggingInterceptor.Level.BODY
+                    HttpLoggingInterceptor.Level.BASIC
                 } else {
                     HttpLoggingInterceptor.Level.NONE
                 }

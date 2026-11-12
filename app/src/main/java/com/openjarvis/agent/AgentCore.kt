@@ -16,7 +16,10 @@ import com.openjarvis.intelligence.TaskWorkingMemory
 import com.openjarvis.llm.UniversalAdapter
 import com.openjarvis.vision.VisionModule
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -36,11 +39,15 @@ class AgentCore(private val context: Context) {
     private val appAnalyzer = AppAnalyzer(context)
     private val aiAppInteractor = AIAppInteractor(context)
     private var workingMemory = TaskWorkingMemory()
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val taskMutex = Mutex()
 
     private val _state = MutableStateFlow<AgentState>(AgentState.Idle)
     val state: StateFlow<AgentState> = _state
+
+    fun release() {
+        scope.cancel()
+    }
 
     private val systemPrompt = """
 You are Open Jarvis — an Android device control AI agent.
@@ -183,6 +190,8 @@ fun executeTask(cleanCommand: String) {
                         graphifyRepo.logTask(cleanCommand, "failed: $msg", "", 0)
                     }
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _state.value = AgentState.Error(e.message ?: "Unknown error")
                 graphifyRepo.logTask(cleanCommand, "failed: ${e.message}", "", 0)

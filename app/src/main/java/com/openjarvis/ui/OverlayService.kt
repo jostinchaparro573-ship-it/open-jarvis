@@ -39,7 +39,6 @@ class OverlayService : LifecycleService() {
     private lateinit var agentCore: AgentCore
     private lateinit var voiceManager: VoiceManager
     private lateinit var graphifyRepo: GraphifyRepository
-    private lateinit var socketServer: com.openjarvis.bridge.SocketServer
     private var recentTasks = emptyList<TaskNode>()
     private var isInitialized = false
 
@@ -49,7 +48,6 @@ class OverlayService : LifecycleService() {
         agentCore = AgentCore(this)
         voiceManager = VoiceManager(this)
         graphifyRepo = GraphifyRepository(this)
-        socketServer = com.openjarvis.bridge.SocketServer(this, agentCore, graphifyRepo)
 
         startForeground(NOTIFICATION_ID, createNotification())
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -62,7 +60,7 @@ class OverlayService : LifecycleService() {
             }
         }
 
-        socketServer.start()
+        // The TCP bridge remains fully disabled until authenticated local IPC is implemented.
         initializeServices()
     }
 
@@ -151,8 +149,8 @@ class OverlayService : LifecycleService() {
             }
         }
         overlayView = null
-        socketServer.stop()
         voiceManager.release()
+        agentCore.release()
         super.onDestroy()
     }
 
