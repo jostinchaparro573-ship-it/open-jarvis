@@ -11,7 +11,7 @@ Commit 6e7976cec8f1d321f1839c570c1641bc52eeba60 passed all three workflow steps:
 - JVM unit tests
 - Android lint
 
-The workflow does not run Android instrumentation tests and does not test on a physical device.
+The workflow configuration now includes Android instrumentation tests on an API 34 emulator. The latest workflow run for commit `346b49cfcc8b8bf7918c1e906094e53fc4b0b68e` has passed Kotlin compilation, JVM unit tests, and Android lint; emulator instrumentation is still running as of this audit snapshot. Emulator success does not prove behavior on a physical device.
 
 ## Corrections completed in the current branch
 
@@ -59,7 +59,7 @@ GraphifyDB is version 3 and only registers migration 2 to 3. Schema export is di
 - ProviderFallbackChain currently returns the active provider regardless of the requested fallback name.
 - AppBuilderMode does not perform an actual Gradle build or ZIP package.
 - PromptEngine and AIAppInteractor require call-site and integration review before being described as working features.
-- SettingsScreen does not yet load all saved provider/model settings.
+- SettingsScreen now receives and restores the saved provider, base URL, API key, and model. This was implemented in the latest branch commit and is awaiting the current CI run.
 - Voice is push-to-talk transcript input with manual Send; no wake phrase or hands-free execution. User-selected phrases are “OK Jarvis” and “Hey Jarvis”; implementation and device validation remain open.
 
 ### Medium — accessibility thread and device behavior
@@ -73,7 +73,7 @@ The upstream repository is MIT-licensed, but every bundled third-party dependenc
 1. Complete the permission, voice, and accessibility lifecycle review.
 2. Design account/profile isolation before changing the Room schema.
 3. Decide Graphify encryption, retention, deletion, and migration strategy.
-4. Add Room migration and Android instrumentation tests to CI.
+4. Keep Android instrumentation tests in CI; add Room migration and profile-isolation test fixtures before introducing profile schema changes.
 5. Correct provider settings and disclose cloud data transfer.
 6. Audit all remaining screen interaction paths and placeholder modules.
 7. Test on HONOR X6C Android 15/MagicOS 9.
@@ -113,3 +113,10 @@ Gemini generation and connection-test requests now put the API key in the `x-goo
 ### High — Gemini model default was retired
 
 The code previously defaulted to `gemini-1.5-flash`, which Google shut down on 2025-09-29. The current default is updated to `gemini-3.8-flash`. The Settings screen also now restores the saved provider configuration and resets provider-specific credentials when changing provider, avoiding accidental reuse of one provider's API key with another. A real Gemini connection test is still required. Google's current model/deprecation documentation is the source of truth for model availability.
+
+
+### CI and provider documentation update (2026-11-12)
+
+The workflow was extended to run connected Android instrumentation tests on an API 34 emulator. On commit `346b49cfcc8b8bf7918c1e906094e53fc4b0b68e`, Kotlin compilation, JVM unit tests, and Android lint have passed; the emulator test step was still in progress at the time of this snapshot. No physical HONOR X6C validation has occurred.
+
+The provider guide's Gemini sample was corrected to use the current `gemini-3.8-flash` default and the `x-goog-api-key` header, rather than the retired `gemini-1.5-flash` model and a key in the URL. The guide now recommends Gemini authorization keys, or explicitly restricted standard keys where still supported, and warns against embedding secrets in a distributed mobile APK. See Google's [Gemini API key guidance](https://ai.google.dev/gemini-api/docs/api-key).
