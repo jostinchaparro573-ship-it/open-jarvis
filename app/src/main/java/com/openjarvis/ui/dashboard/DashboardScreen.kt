@@ -1,6 +1,14 @@
 package com.openjarvis.ui.dashboard
 
 import androidx.compose.animation.*
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import com.openjarvis.vision.VisionModule
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -106,6 +114,10 @@ fun DashboardScreen(
             Spacer(modifier = Modifier.height(24.dp))
             
             QuickAppsSection(apps = mostUsedApps, alpha = appsAlpha)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            VisionImageSection()
             
             Spacer(modifier = Modifier.height(32.dp))
         }
@@ -567,6 +579,123 @@ private fun AppTile(app: AppNode) {
                     color = VoidColor.TextSecondary
                 )
             )
+        }
+    }
+}
+
+
+
+@Composable
+private fun VisionImageSection() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var recognizedText by remember { mutableStateOf<String?>(null) }
+    var status by remember { mutableStateOf("Elige una foto para leer el texto que contiene.") }
+    var isProcessing by remember { mutableStateOf(false) }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri == null) {
+            status = "No seleccionaste ninguna imagen."
+        } else {
+            scope.launch {
+                isProcessing = true
+                recognizedText = null
+                status = "Leyendo imagen en este dispositivo…"
+                try {
+                    val bitmap = withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)?.use { stream ->
+                            BitmapFactory.decodeStream(stream)
+                        }
+                    } ?: throw IllegalArgumentException("No se pudo abrir esta imagen.")
+
+                    try {
+                        val result = VisionModule.getInstance(context).extractText(bitmap)
+                        recognizedText = result
+                        status = if (result.isBlank()) {
+                            "No encontré texto legible. Prueba con una foto más clara."
+                        } else {
+                            "Lectura completada en el dispositivo."
+                        }
+                    } finally {
+                        bitmap.recycle()
+                    }
+                } catch (error: Exception) {
+                    status = "No pude leer la imagen: ${error.message ?: "error desconocido"}"
+                } finally {
+                    isProcessing = false
+                }
+            }
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            text = "VISION & IMAGES",
+            style = TextStyle(
+                fontFamily = FontFamily.Default,
+                fontWeight = FontWeight(600),
+                fontSize = 10.sp,
+                letterSpacing = 3.sp,
+                color = VoidColor.TextDisabled
+            )
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            color = VoidColor.Void900,
+            border = androidx.compose.foundation.BorderStroke(1.dp, VoidColor.BorderSubtle)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "Leer una fotografía",
+                    style = TextStyle(
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight(600),
+                        color = VoidColor.TextPrimary
+                    )
+                )
+                Text(
+                    text = "Selecciona una foto de un cuaderno, taller o documento. El reconocimiento de texto se procesa localmente; la imagen no se envía a un servidor.",
+                    style = TextStyle(
+                        fontSize = 12.sp,
+                        color = VoidColor.TextSecondary
+                    )
+                )
+                OutlinedButton(
+                    onClick = { imagePicker.launch("image/*") },
+                    enabled = !isProcessing,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (isProcessing) "Procesando imagen…" else "Seleccionar fotografía")
+                }
+                Text(
+                    text = status,
+                    style = TextStyle(fontSize = 12.sp, color = VoidColor.TextDisabled)
+                )
+                recognizedText?.let { text ->
+                    if (text.isNotBlank()) {
+                        HorizontalDivider(color = VoidColor.BorderSubtle)
+                        Text(
+                            text = "TEXTO RECONOCIDO",
+                            style = TextStyle(
+                                fontSize = 10.sp,
+                                letterSpacing = 2.sp,
+                                fontWeight = FontWeight(600),
+                                color = VoidColor.Cyan
+                            )
+                        )
+                        Text(
+                            text = text,
+                            style = TextStyle(fontSize = 13.sp, color = VoidColor.TextPrimary)
+                        )
+                    }
+                }
+            }
         }
     }
 }
