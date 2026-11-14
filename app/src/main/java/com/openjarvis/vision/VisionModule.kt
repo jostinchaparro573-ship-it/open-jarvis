@@ -3,33 +3,38 @@ package com.openjarvis.vision
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
+import com.google.android.gms.tasks.Task
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.label.ImageLabeler
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
+import com.google.mlkit.vision.labeling.ImageLabeling
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 /**
- * On-device OCR for user-selected images and explicitly authorized screen captures.
+ * On-device image text extraction and basic image labels.
  *
- * This class only extracts visible text. It does not upload images or call a cloud provider.
+ * Both features run locally. This module never uploads images or calls a cloud provider.
  */
-class VisionModule(context: Context) {
+class VisionModule private constructor() {
 
     private val recognizer: TextRecognizer = TextRecognition.getClient(
         TextRecognizerOptions.DEFAULT_OPTIONS
     )
+    private val imageLabeler: ImageLabeler = ImageLabeling.getClient(
+        ImageLabelerOptions.DEFAULT_OPTIONS
+    )
     private val released = AtomicBoolean(false)
 
     suspend fun extractText(bitmap: Bitmap): String =
-        recognize(bitmap) { visionText -> visionText.text }
+        processImage(bitmap, recognizer::process) { visionText -> visionText.text }
 
     suspend fun extractStructured(bitmap: Bitmap): ScreenOCR =
-        recognize(bitmap) { visionText ->
+        processImage(bitmap, recognizer::process) { visionText ->
             val blocks = visionText.textBlocks.map { block ->
                 OCRBlock(
                     text = block.text,
@@ -51,18 +56,34 @@ class VisionModule(context: Context) {
             ScreenOCR(fullText = visionText.text, blocks = blocks)
         }
 
+    /** Returns basic object/scene labels, not a natural-language explanation. */
+    suspend fun labelImage(bitmap: Bitmap): List<ImageTag> =
+        processImage(bitmap, imageLabeler::process) { labels ->
+            labels
+                .sortedByDescending { it.confidence }
+                .take(MAX_IMAGE_LABELS)
+                .map { label ->
+                    ImageTag(
+                        label = label.text,
+                        confidence = label.confidence,
+                        index = label.index
+                    )
+                }
+        }
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    private suspend fun <T> recognize(
+    private suspend fun <T, R> processImage(
         bitmap: Bitmap,
-        transform: (com.google.mlkit.vision.text.Text) -> T
-    ): T = suspendCancellableCoroutine { continuation ->
+        taskFactory: (InputImage) -> Task<T>,
+        transform: (T) -> R
+    ): R = suspendCancellableCoroutine { continuation ->
         if (released.get()) {
             continuation.resumeWithException(IllegalStateException("VisionModule has been released"))
             return@suspendCancellableCoroutine
         }
 
-        // ML Kit can keep processing after the caller is cancelled. Give it an owned
-        // bitmap so the UI can safely recycle its decoded image in its finally block.
+        // ML Kit may continue after coroutine cancellation. Keep an owned copy until
+        // its Task completes, so callers can safely recycle their decoded bitmap.
         val processingBitmap = try {
             bitmap.copy(Bitmap.Config.ARGB_8888, false)
         } catch (error: Exception) {
@@ -72,7 +93,7 @@ class VisionModule(context: Context) {
 
         if (processingBitmap == null) {
             continuation.tryResumeWithException(
-                IllegalStateException("Could not create an image copy for OCR")
+                IllegalStateException("Could not create an image copy for on-device analysis")
             )?.let(continuation::completeResume)
             return@suspendCancellableCoroutine
         }
@@ -86,11 +107,11 @@ class VisionModule(context: Context) {
 
         try {
             val image = InputImage.fromBitmap(processingBitmap, 0)
-            recognizer.process(image)
-                .addOnSuccessListener { visionText ->
+            taskFactory(image)
+                .addOnSuccessListener { result ->
                     try {
                         if (continuation.isActive) {
-                            val value = transform(visionText)
+                            val value = transform(result)
                             continuation.tryResume(value)?.let(continuation::completeResume)
                         }
                     } catch (error: Exception) {
@@ -100,7 +121,7 @@ class VisionModule(context: Context) {
                     }
                 }
                 .addOnFailureListener { error ->
-                    Log.e(TAG, "On-device image text recognition failed", error)
+                    Log.e(TAG, "On-device image analysis failed", error)
                     releaseProcessingBitmap()
                     continuation.tryResumeWithException(error)?.let(continuation::completeResume)
                 }
@@ -110,18 +131,22 @@ class VisionModule(context: Context) {
         }
     }
 
-    /**
-     * Release this recognizer only when its owning application component is permanently done.
-     * The process-wide singleton should normally live for the application process.
-     */
+    /** Release only when the application process is permanently done with this singleton. */
     fun release() {
         if (released.compareAndSet(false, true)) {
             recognizer.close()
+            imageLabeler.close()
             synchronized(this) {
                 if (instance === this) instance = null
             }
         }
     }
+
+    data class ImageTag(
+        val label: String,
+        val confidence: Float,
+        val index: Int
+    )
 
     data class ScreenOCR(
         val fullText: String,
@@ -150,13 +175,15 @@ class VisionModule(context: Context) {
 
     companion object {
         private const val TAG = "VisionModule"
+        private const val MAX_IMAGE_LABELS = 5
 
         @Volatile
         private var instance: VisionModule? = null
 
+        @Suppress("UNUSED_PARAMETER")
         fun getInstance(context: Context): VisionModule {
             return instance ?: synchronized(this) {
-                instance ?: VisionModule(context.applicationContext).also { instance = it }
+                instance ?: VisionModule().also { instance = it }
             }
         }
     }

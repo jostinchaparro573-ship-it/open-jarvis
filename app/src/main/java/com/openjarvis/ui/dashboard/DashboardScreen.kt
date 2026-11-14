@@ -614,7 +614,8 @@ private fun VisionImageSection() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var recognizedText by remember { mutableStateOf<String?>(null) }
-    var status by remember { mutableStateOf("Elige una foto para leer el texto que contiene.") }
+    var imageLabels by remember { mutableStateOf<List<VisionModule.ImageTag>>(emptyList()) }
+    var status by remember { mutableStateOf("Elige una foto para leer el texto y reconocer elementos básicos.") }
     var isProcessing by remember { mutableStateOf(false) }
 
     val imagePicker = rememberLauncherForActivityResult(
@@ -626,20 +627,20 @@ private fun VisionImageSection() {
             scope.launch {
                 isProcessing = true
                 recognizedText = null
-                status = "Leyendo imagen en este dispositivo…"
+                imageLabels = emptyList()
+                status = "Analizando imagen en este dispositivo…"
                 try {
                     val bitmap = withContext(Dispatchers.IO) {
                         decodePhotoForOcr(context, uri)
                     } ?: throw IllegalArgumentException("No se pudo abrir esta imagen.")
 
                     try {
-                        val result = VisionModule.getInstance(context).extractText(bitmap)
+                        val vision = VisionModule.getInstance(context)
+                        val result = vision.extractText(bitmap)
+                        val labels = vision.labelImage(bitmap)
                         recognizedText = result
-                        status = if (result.isBlank()) {
-                            "No encontré texto legible. Prueba con una foto más clara."
-                        } else {
-                            "Lectura completada en el dispositivo."
-                        }
+                        imageLabels = labels
+                        status = "Análisis local completado. La foto no se envió a un servidor."
                     } finally {
                         bitmap.recycle()
                     }
@@ -701,6 +702,24 @@ private fun VisionImageSection() {
                     text = status,
                     style = TextStyle(fontSize = 12.sp, color = VoidColor.TextDisabled)
                 )
+                if (imageLabels.isNotEmpty()) {
+                    Divider(color = VoidColor.BorderSubtle)
+                    Text(
+                        text = "ELEMENTOS DETECTADOS (ORIENTATIVO)",
+                        style = TextStyle(
+                            fontSize = 10.sp,
+                            letterSpacing = 2.sp,
+                            fontWeight = FontWeight(600),
+                            color = VoidColor.Cyan
+                        )
+                    )
+                    Text(
+                        text = imageLabels.joinToString(" · ") { tag ->
+                            "${tag.label} (${(tag.confidence * 100).toInt()}%)"
+                        },
+                        style = TextStyle(fontSize = 13.sp, color = VoidColor.TextPrimary)
+                    )
+                }
                 recognizedText?.let { text ->
                     if (text.isNotBlank()) {
                         Divider(color = VoidColor.BorderSubtle)

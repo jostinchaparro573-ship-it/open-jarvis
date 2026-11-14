@@ -6,11 +6,12 @@ The dashboard includes a user-initiated photo picker based on Android's Storage 
 
 The selected image is decoded off the main thread and downsampled so its largest dimension is no more than 2048 pixels before OCR. This reduces memory pressure on entry-level Android devices.
 
-Text recognition uses the bundled ML Kit Latin text-recognition model through VisionModule. Recognition runs on-device. The selected image is not uploaded to a remote provider by this feature.
+Text recognition uses the bundled ML Kit Latin text-recognition model through VisionModule. Basic image labeling uses ML Kit's bundled image-labeling model. Both run on-device. The selected image is not uploaded to a remote provider by these features.
 
 ## Current limits
 
-- This feature extracts visible text; it does not yet understand the semantic content of a photograph.
+- The module extracts visible text and returns up to five general image labels from ML Kit's on-device image-labeling model.
+- Labels are broad predictions (for example, common objects or scene categories), not a detailed explanation or guaranteed identification.
 - It does not yet answer free-form questions about objects, scenes, diagrams, or people in a photo.
 - It does not generate or edit images.
 - The current OCR recognizer is configured for Latin script. Other scripts require additional recognizer support and testing.
@@ -22,7 +23,7 @@ Text recognition uses the bundled ML Kit Latin text-recognition model through Vi
 2. Add an image-understanding interface with explicit cloud-consent checks before any selected image leaves the device.
 3. Evaluate a genuinely on-device image-understanding model against HONOR X6C memory, storage, latency, and thermal limits.
 4. Evaluate lightweight local drawing generation for simple school illustrations. Do not advertise this as unlimited until the model and device performance are measured.
-5. Add tests for image decoding bounds, cancellation, OCR failures, and privacy boundaries.
+5. Add tests for image decoding bounds, cancellation, OCR/labeling failures, and privacy boundaries.
 
 ## Cost and privacy policy
 
