@@ -29,7 +29,10 @@ class VisionModule private constructor() {
     private val imageLabeler: ImageLabeler = ImageLabeling.getClient(
         ImageLabelerOptions.DEFAULT_OPTIONS
     )
-    private val released = AtomicBoolean(false)
+    private val lifecycle = VisionTaskLifecycle {
+        recognizer.close()
+        imageLabeler.close()
+    }
 
     suspend fun extractText(bitmap: Bitmap): String =
         processImage(bitmap, recognizer::process) { visionText -> visionText.text }
@@ -78,9 +81,18 @@ class VisionModule private constructor() {
         taskFactory: (InputImage) -> Task<T>,
         transform: (T) -> R
     ): R = suspendCancellableCoroutine { continuation ->
-        if (released.get()) {
-            continuation.resumeWithException(IllegalStateException("VisionModule has been released"))
+        if (!lifecycle.beginTask()) {
+            continuation.resumeWithException(
+                IllegalStateException("VisionModule is closing or has been released")
+            )
             return@suspendCancellableCoroutine
+        }
+
+        val taskFinished = AtomicBoolean(false)
+        fun finishTask() {
+            if (taskFinished.compareAndSet(false, true)) {
+                lifecycle.finishTask()
+            }
         }
 
         // ML Kit may continue after coroutine cancellation. Keep an owned copy until
@@ -88,11 +100,13 @@ class VisionModule private constructor() {
         val processingBitmap = try {
             bitmap.copy(Bitmap.Config.ARGB_8888, false)
         } catch (error: Exception) {
+            finishTask()
             continuation.tryResumeWithException(error)?.let(continuation::completeResume)
             return@suspendCancellableCoroutine
         }
 
         if (processingBitmap == null) {
+            finishTask()
             continuation.tryResumeWithException(
                 IllegalStateException("Could not create an image copy for on-device analysis")
             )?.let(continuation::completeResume)
@@ -119,27 +133,27 @@ class VisionModule private constructor() {
                         continuation.tryResumeWithException(error)?.let(continuation::completeResume)
                     } finally {
                         releaseProcessingBitmap()
+                        finishTask()
                     }
                 }
                 .addOnFailureListener { error ->
                     Log.e(TAG, "On-device image analysis failed", error)
                     releaseProcessingBitmap()
+                    finishTask()
                     continuation.tryResumeWithException(error)?.let(continuation::completeResume)
                 }
         } catch (error: Exception) {
             releaseProcessingBitmap()
+            finishTask()
             continuation.tryResumeWithException(error)?.let(continuation::completeResume)
         }
     }
 
-    /** Release only when the application process is permanently done with this singleton. */
+    /** Release detector resources after all already-started ML Kit tasks finish. */
     fun release() {
-        if (released.compareAndSet(false, true)) {
-            recognizer.close()
-            imageLabeler.close()
-            synchronized(Companion) {
-                if (instance === this) instance = null
-            }
+        synchronized(Companion) {
+            if (instance === this) instance = null
+            lifecycle.requestClose()
         }
     }
 
