@@ -1,7 +1,9 @@
 package com.openjarvis.ui.dashboard
 
 import androidx.compose.animation.*
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
@@ -585,6 +587,27 @@ private fun AppTile(app: AppNode) {
 
 
 
+private fun decodePhotoForOcr(context: android.content.Context, uri: Uri): Bitmap? {
+    val resolver = context.contentResolver
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+
+    val maxDimension = 2048
+    var sampleSize = 1
+    while (bounds.outWidth / sampleSize > maxDimension ||
+        bounds.outHeight / sampleSize > maxDimension
+    ) {
+        sampleSize *= 2
+    }
+
+    val options = BitmapFactory.Options().apply {
+        inSampleSize = sampleSize
+        inPreferredConfig = Bitmap.Config.ARGB_8888
+    }
+    return resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+}
+
 @Composable
 private fun VisionImageSection() {
     val context = LocalContext.current
@@ -605,9 +628,7 @@ private fun VisionImageSection() {
                 status = "Leyendo imagen en este dispositivo…"
                 try {
                     val bitmap = withContext(Dispatchers.IO) {
-                        context.contentResolver.openInputStream(uri)?.use { stream ->
-                            BitmapFactory.decodeStream(stream)
-                        }
+                        decodePhotoForOcr(context, uri)
                     } ?: throw IllegalArgumentException("No se pudo abrir esta imagen.")
 
                     try {
