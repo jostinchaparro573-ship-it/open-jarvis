@@ -53,6 +53,8 @@ fun SettingsScreen(
     initialModel: String = "llama-3.1-70b-versatile",
     initialCloudDataConsent: Boolean = false,
     onCloudDataConsentChange: (String, Boolean) -> Unit = { _, _ -> },
+    initialCloudImageConsent: Boolean = false,
+    onCloudImageConsentChange: (String, Boolean) -> Unit = { _, _ -> },
     initialVoiceEnabled: Boolean = false,
     initialSpeakResults: Boolean = true,
     onVoiceEnabledChange: (Boolean) -> Unit = {},
@@ -71,6 +73,7 @@ fun SettingsScreen(
     var lastSaved by remember { mutableStateOf(0L) }
     var savedVisible by remember { mutableStateOf(false) }
     var cloudDataConsent by remember { mutableStateOf(initialCloudDataConsent) }
+    var cloudImageConsent by remember { mutableStateOf(initialCloudImageConsent) }
     var voiceEnabled by remember { mutableStateOf(initialVoiceEnabled) }
     var speakResults by remember { mutableStateOf(initialSpeakResults) }
     val context = LocalContext.current
@@ -141,6 +144,8 @@ fun SettingsScreen(
                         // Consent is provider-specific: changing provider revokes it.
                         cloudDataConsent = false
                         onCloudDataConsentChange(provider, false)
+                        cloudImageConsent = false
+                        onCloudImageConsentChange(provider, false)
                         showProvidersDropdown = false
                     }
                 )
@@ -220,6 +225,35 @@ fun SettingsScreen(
 
                 Text(
                     text = "When enabled, Jarvis may send your typed or transcribed command and the context included with it — such as text you explicitly ask it to read from the screen and relevant memory — to the selected cloud AI provider. This is separate from microphone and Accessibility permissions. Local Ollama/LlamaCpp providers do not require this setting. Turn it off any time.",
+                    style = TextStyle(
+                        fontFamily = FontFamily.Default,
+                        fontWeight = FontWeight(400),
+                        fontSize = 11.sp,
+                        color = VoidColor.TextDisabled
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                SettingsToggleRow(
+                    title = "Cloud Image Sharing",
+                    subtitle = if (cloudImageConsent) {
+                        "Enabled · selected photos may be sent to " + selectedProvider
+                    } else {
+                        "Disabled · selected photos stay on this device"
+                    },
+                    enabled = cloudImageConsent,
+                    icon = Icons.Default.Cloud,
+                    onToggle = {
+                        cloudImageConsent = !cloudImageConsent
+                        onCloudImageConsentChange(selectedProvider, cloudImageConsent)
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "This is a separate permission from Cloud Data Sharing. It allows the selected photo itself to be sent to the selected cloud provider for image analysis. It does not activate image analysis by itself. Local providers do not need this permission.",
                     style = TextStyle(
                         fontFamily = FontFamily.Default,
                         fontWeight = FontWeight(400),
