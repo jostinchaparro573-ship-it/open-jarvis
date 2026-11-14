@@ -7,6 +7,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -642,6 +643,8 @@ private fun VisionImageSection() {
                     } finally {
                         bitmap.recycle()
                     }
+                } catch (error: CancellationException) {
+                    throw error
                 } catch (error: Exception) {
                     status = "No pude leer la imagen: ${error.message ?: "error desconocido"}"
                 } finally {
@@ -700,7 +703,7 @@ private fun VisionImageSection() {
                 )
                 recognizedText?.let { text ->
                     if (text.isNotBlank()) {
-                        HorizontalDivider(color = VoidColor.BorderSubtle)
+                        Divider(color = VoidColor.BorderSubtle)
                         Text(
                             text = "TEXTO RECONOCIDO",
                             style = TextStyle(
