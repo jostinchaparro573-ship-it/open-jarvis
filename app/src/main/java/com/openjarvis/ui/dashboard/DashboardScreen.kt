@@ -3,7 +3,9 @@ package com.openjarvis.ui.dashboard
 import androidx.compose.animation.*
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
+import androidx.exifinterface.media.ExifInterface
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -591,6 +593,14 @@ private fun AppTile(app: AppNode) {
 
 private fun decodePhotoForOcr(context: android.content.Context, uri: Uri): Bitmap? {
     val resolver = context.contentResolver
+    // Read EXIF before decoding so camera rotation/mirroring is applied to the
+    // downsampled bitmap, avoiding an extra full-resolution allocation.
+    val orientation = runCatching {
+        resolver.openInputStream(uri)?.use { input ->
+            ExifInterface(input).let { it.rotationDegrees to it.isFlipped }
+        }
+    }.getOrNull() ?: (0 to false)
+
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
@@ -599,7 +609,27 @@ private fun decodePhotoForOcr(context: android.content.Context, uri: Uri): Bitma
         inSampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight)
         inPreferredConfig = Bitmap.Config.ARGB_8888
     }
-    return resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+    val decoded = resolver.openInputStream(uri)?.use {
+        BitmapFactory.decodeStream(it, null, options)
+    } ?: return null
+
+    val (rotationDegrees, isFlipped) = orientation
+    if (rotationDegrees == 0 && !isFlipped) return decoded
+
+    return try {
+        val transform = Matrix().apply {
+            postRotate(rotationDegrees.toFloat())
+            if (isFlipped) postScale(-1f, 1f)
+        }
+        Bitmap.createBitmap(
+            decoded, 0, 0, decoded.width, decoded.height, transform, true
+        ).also { corrected ->
+            if (corrected !== decoded) decoded.recycle()
+        }
+    } catch (error: Exception) {
+        Log.w("VisionImageSection", "Could not apply photo EXIF orientation", error)
+        decoded
+    }
 }
 
 @Composable
