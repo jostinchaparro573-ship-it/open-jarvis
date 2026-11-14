@@ -137,7 +137,7 @@ class VisionModule private constructor() {
         if (released.compareAndSet(false, true)) {
             recognizer.close()
             imageLabeler.close()
-            synchronized(this) {
+            synchronized(Companion) {
                 if (instance === this) instance = null
             }
         }
