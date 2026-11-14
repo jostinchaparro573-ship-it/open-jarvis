@@ -7,70 +7,96 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class VisionModule(private val context: Context) {
+/**
+ * On-device OCR for user-selected images and explicitly authorized screen captures.
+ *
+ * This class only extracts visible text. It does not upload images or call a cloud provider.
+ */
+class VisionModule(context: Context) {
 
     private val recognizer: TextRecognizer = TextRecognition.getClient(
         TextRecognizerOptions.DEFAULT_OPTIONS
     )
+    private val released = AtomicBoolean(false)
 
-    suspend fun extractText(bitmap: Bitmap): String = suspendCancellableCoroutine { continuation ->
-        val image = InputImage.fromBitmap(bitmap, 0)
-        
-        recognizer.process(image)
-            .addOnSuccessListener { visionText ->
-                val extractedText = visionText.text
-                if (extractedText.isNotBlank()) {
-                    continuation.resume(extractedText)
-                } else {
-                    continuation.resume("")
-                }
-            }
-            .addOnFailureListener { e ->
-                Log.e(TAG, "OCR failed", e)
-                continuation.resume("")
-            }
-    }
+    suspend fun extractText(bitmap: Bitmap): String =
+        recognize(bitmap) { visionText -> visionText.text }
 
-    suspend fun extractStructured(bitmap: Bitmap): ScreenOCR = suspendCancellableCoroutine { continuation ->
-        val image = InputImage.fromBitmap(bitmap, 0)
-        
-        recognizer.process(image)
-            .addOnSuccessListener { visionText ->
-                val blocks = visionText.textBlocks.map { block ->
-                    OCRBlock(
-                        text = block.text,
-                        confidence = 0f,
-                        boundingBox = block.boundingBox?.let { rect ->
-                            BoundingBox(rect.left, rect.top, rect.right, rect.bottom)
-                        },
-                        lines = block.lines.map { line ->
-                            OCRLine(
-                                text = line.text,
-                                confidence = 0f,
-                                boundingBox = line.boundingBox?.let { rect ->
-                                    BoundingBox(rect.left, rect.top, rect.right, rect.bottom)
-                                }
-                            )
+    suspend fun extractStructured(bitmap: Bitmap): ScreenOCR =
+        recognize(bitmap) { visionText ->
+            val blocks = visionText.textBlocks.map { block ->
+                OCRBlock(
+                    text = block.text,
+                    confidence = 0f,
+                    boundingBox = block.boundingBox?.let { rect ->
+                        BoundingBox(rect.left, rect.top, rect.right, rect.bottom)
+                    },
+                    lines = block.lines.map { line ->
+                        OCRLine(
+                            text = line.text,
+                            confidence = 0f,
+                            boundingBox = line.boundingBox?.let { rect ->
+                                BoundingBox(rect.left, rect.top, rect.right, rect.bottom)
+                            }
+                        )
+                    }
+                )
+            }
+            ScreenOCR(fullText = visionText.text, blocks = blocks)
+        }
+
+    private suspend fun <T> recognize(
+        bitmap: Bitmap,
+        transform: (com.google.mlkit.vision.text.Text) -> T
+    ): T = suspendCancellableCoroutine { continuation ->
+        if (released.get()) {
+            continuation.resumeWithException(IllegalStateException("VisionModule has been released"))
+            return@suspendCancellableCoroutine
+        }
+
+        try {
+            val image = InputImage.fromBitmap(bitmap, 0)
+            recognizer.process(image)
+                .addOnSuccessListener { visionText ->
+                    if (continuation.isActive) {
+                        try {
+                            val value = transform(visionText)
+                            continuation.tryResume(value)?.let(continuation::completeResume)
+                        } catch (error: Exception) {
+                            continuation.tryResumeWithException(error)?.let(continuation::completeResume)
                         }
-                    )
+                    }
                 }
-                continuation.resume(ScreenOCR(
-                    fullText = visionText.text,
-                    blocks = blocks
-                ))
-            }
-            .addOnFailureListener { e ->
-                Log.e(TAG, "OCR failed", e)
-                continuation.resume(ScreenOCR("", emptyList()))
-            }
+                .addOnFailureListener { error ->
+                    Log.e(TAG, "On-device image text recognition failed", error)
+                    if (continuation.isActive) {
+                        continuation.tryResumeWithException(error)?.let(continuation::completeResume)
+                    }
+                }
+        } catch (error: Exception) {
+            continuation.tryResumeWithException(error)?.let(continuation::completeResume)
+        }
     }
 
+    /**
+     * Release this recognizer only when its owning application component is permanently done.
+     * The process-wide singleton should normally live for the application process.
+     */
     fun release() {
-        recognizer.close()
+        if (released.compareAndSet(false, true)) {
+            recognizer.close()
+            synchronized(this) {
+                if (instance === this) instance = null
+            }
+        }
     }
 
     data class ScreenOCR(
