@@ -629,19 +629,22 @@ private fun VisionImageSection() {
 
                     try {
                         val vision = VisionModule.getInstance(context)
-                        val result = vision.extractText(bitmap)
-                        recognizedText = result
-
-                        // Labeling is an additional feature: if its model fails to initialize,
-                        // keep the OCR result instead of discarding useful text.
-                        val labels = try {
-                            vision.labelImage(bitmap)
-                        } catch (error: CancellationException) {
-                            throw error
-                        } catch (error: Exception) {
-                            Log.w("VisionImageSection", "On-device image labeling unavailable", error)
-                            emptyList()
+                        // Bitmap copies and model preprocessing can be expensive on entry-level
+                        // phones; keep both local analysis steps off the UI thread.
+                        val (result, labels) = withContext(Dispatchers.Default) {
+                            val text = vision.extractText(bitmap)
+                            // Labeling is optional: retain OCR output if this model fails.
+                            val detectedLabels = try {
+                                vision.labelImage(bitmap)
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: Exception) {
+                                Log.w("VisionImageSection", "On-device image labeling unavailable", error)
+                                emptyList()
+                            }
+                            text to detectedLabels
                         }
+                        recognizedText = result
                         imageLabels = labels
                         status = when {
                             result.isBlank() && labels.isEmpty() ->
