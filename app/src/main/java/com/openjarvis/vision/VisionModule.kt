@@ -61,26 +61,51 @@ class VisionModule(context: Context) {
             return@suspendCancellableCoroutine
         }
 
+        // ML Kit can keep processing after the caller is cancelled. Give it an owned
+        // bitmap so the UI can safely recycle its decoded image in its finally block.
+        val processingBitmap = try {
+            bitmap.copy(Bitmap.Config.ARGB_8888, false)
+        } catch (error: Exception) {
+            continuation.tryResumeWithException(error)?.let(continuation::completeResume)
+            return@suspendCancellableCoroutine
+        }
+
+        if (processingBitmap == null) {
+            continuation.tryResumeWithException(
+                IllegalStateException("Could not create an image copy for OCR")
+            )?.let(continuation::completeResume)
+            return@suspendCancellableCoroutine
+        }
+
+        val bitmapReleased = AtomicBoolean(false)
+        fun releaseProcessingBitmap() {
+            if (bitmapReleased.compareAndSet(false, true) && !processingBitmap.isRecycled) {
+                processingBitmap.recycle()
+            }
+        }
+
         try {
-            val image = InputImage.fromBitmap(bitmap, 0)
+            val image = InputImage.fromBitmap(processingBitmap, 0)
             recognizer.process(image)
                 .addOnSuccessListener { visionText ->
-                    if (continuation.isActive) {
-                        try {
+                    try {
+                        if (continuation.isActive) {
                             val value = transform(visionText)
                             continuation.tryResume(value)?.let(continuation::completeResume)
-                        } catch (error: Exception) {
-                            continuation.tryResumeWithException(error)?.let(continuation::completeResume)
                         }
+                    } catch (error: Exception) {
+                        continuation.tryResumeWithException(error)?.let(continuation::completeResume)
+                    } finally {
+                        releaseProcessingBitmap()
                     }
                 }
                 .addOnFailureListener { error ->
                     Log.e(TAG, "On-device image text recognition failed", error)
-                    if (continuation.isActive) {
-                        continuation.tryResumeWithException(error)?.let(continuation::completeResume)
-                    }
+                    releaseProcessingBitmap()
+                    continuation.tryResumeWithException(error)?.let(continuation::completeResume)
                 }
         } catch (error: Exception) {
+            releaseProcessingBitmap()
             continuation.tryResumeWithException(error)?.let(continuation::completeResume)
         }
     }
