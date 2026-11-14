@@ -8,6 +8,17 @@ The selected image is decoded off the main thread and downsampled so its largest
 
 Text recognition uses the bundled ML Kit Latin text-recognition model through VisionModule. Basic image labeling uses ML Kit's bundled image-labeling model (approximately 5.7 MB added to the app). Both run on-device without requiring a cloud inference API. The selected image is not uploaded to a remote provider by these features.
 
+## On-device generative image understanding evaluation
+
+The official ML Kit GenAI Image Description API uses Gemini Nano through Android AICore and can produce a short image description. It is not a general-purpose, free-form visual question-answering API. The documented language support is currently English, and availability must be checked at runtime with `checkFeatureStatus()`.
+
+The official supported-device list does not currently include the HONOR X6C. The X6C's Helio G81 Ultra and Android 15 specifications do not establish Gemini Nano/AICore compatibility. Therefore, Jarvis must not add this API as a required dependency or present it as available on the target phone. Revisit only if Google adds the exact device or runtime checks on the physical X6C confirm support. If added later, treat it as an optional capability and retain the current local OCR/labels when unavailable.
+
+References:
+- [ML Kit GenAI overview and supported devices](https://developers.google.com/ml-kit/genai)
+- [ML Kit GenAI Image Description API](https://developers.google.cn/ml-kit/genai/image-description/android?hl=en)
+- [HONOR X6c official specifications](https://www.honor.com/latam/phones/honor-x6c/spec/)
+
 ## Current limits
 
 - The module extracts visible text and returns up to five general image labels from ML Kit's on-device image-labeling model.
