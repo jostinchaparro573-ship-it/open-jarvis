@@ -52,4 +52,17 @@ class CloudDataPolicyTest {
         assertFalse(CloudDataPolicy.hasImageConsentForProvider("Ollama (Local)", true, "Ollama (Local)"))
         assertFalse(CloudDataPolicy.hasImageConsentForProvider("Local (LlamaCpp)", true, "Local (LlamaCpp)"))
     }
+
+    @Test
+    fun localProvidersCanProcessImagesWithoutCloudConsent() {
+        assertTrue(CloudDataPolicy.canSendImage("Ollama (Local)", false, null))
+        assertTrue(CloudDataPolicy.canSendImage("Local (LlamaCpp)", false, null))
+    }
+
+    @Test
+    fun cloudImageProcessingFailsClosedWithoutMatchingImageConsent() {
+        assertFalse(CloudDataPolicy.canSendImage("Groq", false, null))
+        assertFalse(CloudDataPolicy.canSendImage("Groq", true, "OpenAI"))
+        assertTrue(CloudDataPolicy.canSendImage("Groq", true, "Groq"))
+    }
 }

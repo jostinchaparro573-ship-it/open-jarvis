@@ -90,8 +90,14 @@ class UniversalAdapter(private val context: Context) {
      * Call this before any future image request routed through a provider.
      * Local providers do not transmit the image to a cloud service.
      */
-    fun canSendImageToSelectedProvider(): Boolean =
-        !isCloudProvider() || hasCloudImageConsent()
+    fun canSendImageToSelectedProvider(): Boolean {
+        val providerId = getProviderName()
+        return CloudDataPolicy.canSendImage(
+            providerId = providerId,
+            imageConsentEnabled = prefs.getBoolean(KEY_CLOUD_IMAGE_CONSENT, false),
+            imageConsentProviderId = prefs.getString(KEY_CLOUD_IMAGE_CONSENT_PROVIDER, null)
+        )
+    }
 
     fun isCloudProvider(name: String = getProviderName()): Boolean =
         CloudDataPolicy.requiresConsent(name)

@@ -30,4 +30,19 @@ object CloudDataPolicy {
     ): Boolean = requiresConsent(providerId) &&
         enabled &&
         consentProviderId == providerId
+
+    /**
+     * Local providers can process without cloud consent. Every cloud or
+     * unrecognized provider requires image-specific consent for that provider.
+     */
+    fun canSendImage(
+        providerId: String,
+        imageConsentEnabled: Boolean,
+        imageConsentProviderId: String?
+    ): Boolean = !requiresConsent(providerId) ||
+        hasImageConsentForProvider(
+            providerId,
+            imageConsentEnabled,
+            imageConsentProviderId
+        )
 }
