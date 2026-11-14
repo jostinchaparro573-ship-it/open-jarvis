@@ -34,4 +34,22 @@ class CloudDataPolicyTest {
             assertTrue("$provider must be treated as cloud", CloudDataPolicy.requiresConsent(provider))
         }
     }
+
+    @Test
+    fun imageConsentIsSeparateFromTextConsentAndBoundToProvider() {
+        // Text consent alone cannot authorize image upload.
+        assertFalse(CloudDataPolicy.hasImageConsentForProvider("Groq", false, null))
+        assertFalse(CloudDataPolicy.hasImageConsentForProvider("Groq", false, "Groq"))
+
+        // Image consent must match the currently selected provider.
+        assertTrue(CloudDataPolicy.hasImageConsentForProvider("Groq", true, "Groq"))
+        assertFalse(CloudDataPolicy.hasImageConsentForProvider("OpenAI", true, "Groq"))
+        assertFalse(CloudDataPolicy.hasImageConsentForProvider("Groq", true, null))
+    }
+
+    @Test
+    fun localProvidersNeverNeedCloudImageConsent() {
+        assertFalse(CloudDataPolicy.hasImageConsentForProvider("Ollama (Local)", true, "Ollama (Local)"))
+        assertFalse(CloudDataPolicy.hasImageConsentForProvider("Local (LlamaCpp)", true, "Local (LlamaCpp)"))
+    }
 }

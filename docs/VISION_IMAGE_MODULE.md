@@ -31,7 +31,7 @@ References:
 ## Next milestones
 
 1. Add camera capture using Android's camera APIs, without requesting unrelated permissions.
-2. Add an image-understanding interface with explicit cloud-consent checks before any selected image leaves the device.
+2. Add a settings control for separate cloud-image consent, then require that check before any selected image leaves the device.
 3. Evaluate a genuinely on-device image-understanding model against HONOR X6C memory, storage, latency, and thermal limits.
 4. Evaluate lightweight local drawing generation for simple school illustrations. Do not advertise this as unlimited until the model and device performance are measured.
 5. Add tests for image decoding bounds, cancellation, OCR/labeling failures, and privacy boundaries. The power-of-two downsampling calculation now has JVM unit tests.
@@ -40,5 +40,6 @@ References:
 
 - Local photo selection and OCR must not require a paid API.
 - Never upload a selected photo silently.
-- Any cloud-based image analysis must disclose the selected provider and require explicit consent.
+- Text/prompt sharing consent does not authorize sending image bytes. Cloud image analysis requires a separate, explicit opt-in for the currently selected provider.
+- The adapter exposes a fail-closed image-consent check for future image requests. No cloud image-upload path is implemented or authorized by this change.
 - Image generation must not silently fall back to a paid service. If no free/local option is available, explain that limitation.
