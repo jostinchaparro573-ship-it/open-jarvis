@@ -4,6 +4,7 @@ import androidx.compose.animation.*
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
@@ -637,10 +638,27 @@ private fun VisionImageSection() {
                     try {
                         val vision = VisionModule.getInstance(context)
                         val result = vision.extractText(bitmap)
-                        val labels = vision.labelImage(bitmap)
                         recognizedText = result
+
+                        // Labeling is an additional feature: if its model fails to initialize,
+                        // keep the OCR result instead of discarding useful text.
+                        val labels = try {
+                            vision.labelImage(bitmap)
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (error: Exception) {
+                            Log.w("VisionImageSection", "On-device image labeling unavailable", error)
+                            emptyList()
+                        }
                         imageLabels = labels
-                        status = "Análisis local completado. La foto no se envió a un servidor."
+                        status = when {
+                            result.isBlank() && labels.isEmpty() ->
+                                "No encontré texto ni etiquetas claras. Prueba con una foto más nítida."
+                            labels.isEmpty() ->
+                                "Texto leído localmente; no fue posible generar etiquetas."
+                            else ->
+                                "Análisis local completado. La foto no se envió a un servidor."
+                        }
                     } finally {
                         bitmap.recycle()
                     }
