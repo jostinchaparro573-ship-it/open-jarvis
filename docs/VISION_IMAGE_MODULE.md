@@ -4,7 +4,7 @@
 
 The dashboard includes a user-initiated photo picker based on Android's Storage Access Framework (GetContent). Jarvis receives only the image selected by the user; it does not request broad gallery access.
 
-The selected image is decoded off the main thread and downsampled so its largest dimension is no more than 2048 pixels before OCR. This reduces memory pressure on entry-level Android devices.
+The selected image is decoded off the main thread and downsampled so its largest dimension is no more than 2048 pixels before OCR and image labeling. The downsampling calculation accounts for odd image dimensions. Bitmap copies and local model preprocessing also run away from the UI thread. This reduces memory pressure and UI stalls on entry-level Android devices.
 
 Text recognition uses the bundled ML Kit Latin text-recognition model through VisionModule. Basic image labeling uses ML Kit's bundled image-labeling model (approximately 5.7 MB added to the app). Both run on-device without requiring a cloud inference API. The selected image is not uploaded to a remote provider by these features.
 
