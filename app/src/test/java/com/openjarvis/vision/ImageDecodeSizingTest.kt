@@ -21,10 +21,21 @@ class ImageDecodeSizingTest {
     }
 
     @Test
+    fun oddDimensionsDoNotExceedMaximumAfterRoundingUp() {
+        assertEquals(4, calculateInSampleSize(4097, 2048))
+        assertEquals(2, calculateInSampleSize(2049, 2049))
+    }
+
+    @Test
     fun invalidDimensionsReturnSafeDefault() {
         assertEquals(1, calculateInSampleSize(0, 9000))
         assertEquals(1, calculateInSampleSize(9000, -1))
         assertEquals(1, calculateInSampleSize(9000, 9000, 0))
+    }
+
+    @Test
+    fun veryLargeDimensionsDoNotOverflow() {
+        assertEquals(1 shl 20, calculateInSampleSize(Int.MAX_VALUE, Int.MAX_VALUE))
     }
 
     @Test

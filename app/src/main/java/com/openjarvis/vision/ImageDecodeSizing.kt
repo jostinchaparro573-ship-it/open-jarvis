@@ -12,8 +12,13 @@ internal fun calculateInSampleSize(
     if (width <= 0 || height <= 0 || maxDimension <= 0) return 1
 
     var sampleSize = 1
-    while (width / sampleSize > maxDimension ||
-        height / sampleSize > maxDimension
+    // Use ceiling division: floor division can leave an odd-sized bitmap one pixel
+    // above the intended maximum (for example, 4097 / 2 = 2048 by floor, but 2049 actual).
+    fun scaledDimension(dimension: Int): Long =
+        (dimension.toLong() + sampleSize - 1L) / sampleSize
+
+    while (scaledDimension(width) > maxDimension ||
+        scaledDimension(height) > maxDimension
     ) {
         if (sampleSize > Int.MAX_VALUE / 2) return sampleSize
         sampleSize *= 2
