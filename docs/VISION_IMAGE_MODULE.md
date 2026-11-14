@@ -23,7 +23,7 @@ Text recognition uses the bundled ML Kit Latin text-recognition model through Vi
 2. Add an image-understanding interface with explicit cloud-consent checks before any selected image leaves the device.
 3. Evaluate a genuinely on-device image-understanding model against HONOR X6C memory, storage, latency, and thermal limits.
 4. Evaluate lightweight local drawing generation for simple school illustrations. Do not advertise this as unlimited until the model and device performance are measured.
-5. Add tests for image decoding bounds, cancellation, OCR/labeling failures, and privacy boundaries.
+5. Add tests for image decoding bounds, cancellation, OCR/labeling failures, and privacy boundaries. The power-of-two downsampling calculation now has JVM unit tests.
 
 ## Cost and privacy policy
 

@@ -595,16 +595,8 @@ private fun decodePhotoForOcr(context: android.content.Context, uri: Uri): Bitma
     resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
-    val maxDimension = 2048
-    var sampleSize = 1
-    while (bounds.outWidth / sampleSize > maxDimension ||
-        bounds.outHeight / sampleSize > maxDimension
-    ) {
-        sampleSize *= 2
-    }
-
     val options = BitmapFactory.Options().apply {
-        inSampleSize = sampleSize
+        inSampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight)
         inPreferredConfig = Bitmap.Config.ARGB_8888
     }
     return resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
