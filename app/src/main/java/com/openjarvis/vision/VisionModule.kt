@@ -7,9 +7,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
@@ -53,6 +51,7 @@ class VisionModule(context: Context) {
             ScreenOCR(fullText = visionText.text, blocks = blocks)
         }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun <T> recognize(
         bitmap: Bitmap,
         transform: (com.google.mlkit.vision.text.Text) -> T
